@@ -1,0 +1,91 @@
+@keyframes marquee {
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-marquee {
+  display: inline-block;
+  white-space: nowrap;
+  animation: marquee 20s linear infinite;
+}
+
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+  
+}
+
+.animate-fade {
+  animation: fadeIn 1s;
+}
+
+
+@media (max-height: 700px) {
+  .min-h-screen {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  }
+  img {
+    height: 100px !important;
+  }
+}
+
+
+  .link-78 {
+    color: #ffffff;
+    font-size: 20px;
+    text-decoration: none;
+    padding: 10px 20px;
+    margin: 0 5px;
+    position: relative;
+    display: inline-block;
+    overflow: hidden;
+  }
+  
+  .link-78::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 100%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+  }
+  
+  .link-78:hover::before {
+    width: 200px;
+    height: 200px;
+    animation: ripple78 1s ease-out infinite;
+    opacity: 1;
+  }
+  
+  @keyframes ripple78 {
+    0% {
+      width: 0;
+      height: 0;
+      opacity: 1;
+    }
+    100% {
+      width: 200px;
+      height: 200px;
+      opacity: 0;
+    }
+  }
+
+  
+

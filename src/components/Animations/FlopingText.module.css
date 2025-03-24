@@ -1,0 +1,65 @@
+@import url(https://fonts.googleapis.com/css?family=Lato:600);
+
+.rotating-text {
+  font-family: Lato, sans-serif;
+  font-weight: 600;
+  font-size: 36px;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  width: 100%;
+  position: relative;
+}
+
+.word {
+  position: absolute;
+  display: flex;
+  opacity: 0;
+  left: 0;
+  right: 0;
+  justify-content: center;
+  text-align: center;
+}
+
+.word.visible {
+  opacity: 1;
+}
+
+.letter {
+  transform-origin: center center 25px;
+}
+
+.letter.out {
+  transform: rotateX(90deg);
+  transition: 0.32s cubic-bezier(0.6, 0, 0.7, 0.2);
+}
+
+.letter.in {
+  transition: 0.38s ease;
+}
+
+.letter.behind {
+  transform: rotateX(-90deg);
+}
+
+.alizarin {
+  color: #e74c3c;
+}
+
+.wisteria {
+  color: #8e44ad;
+}
+
+.peter-river {
+  color: #3498db;
+}
+
+.emerald {
+  color: #2ecc71;
+}
+
+.sun-flower {
+  color: #f1c40f;
+}

@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+:root {
+  --color-primary: #479cec;
+  --color-secondary: #4f6cde;
+  --color-tertiaty: #99a0a3;
+  --color-fourtiary: #118bbf;
+}
+
+a { 
+  @apply text-blue-500;
+}
+
+
+a:before {
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%,-50%);
+}
+
+
+.content p {
+  @apply my-6;
+}
+
+.content ul {
+  @apply my-6;
+}

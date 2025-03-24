@@ -1,0 +1,155 @@
+{
+  "company": {
+    "name": "React landing page 2021",
+    "logo": "/assets/images/osrs.png"
+  },
+  "navigation": [
+    {
+      "name": "Novinky",
+      "href": "news"
+    },
+    {
+      "name": "Galéria",
+      "href": "gallery"
+    },
+    {
+      "name": "Členstvo",
+      "href": "features"
+    },
+    {
+      "name": "Komisie",
+      "href": "komisie"
+    },
+   {
+      "name": "Predsedníctvo",
+      "href": "team"
+    },
+    {
+      "name": "Kontakt",
+      "href": "contact"
+    },
+    {
+      "name": "Na stiahnutie",
+      "href": "download"
+    }
+  ],
+ "mainHero": {
+    "title": "OKRÚHLY STÔL",
+    "subtitle": " RUSÍNOV SLOVENSKA",
+    "description": "Okrúhly stôl Rusínov Slovenska je konzultačná platforma zástupcov organizácií a nezávislých osobností, ktoré spája záujem o rozvoj národnej identity, obhajobu ústavných práv a zvyšovanie kvality života Rusínov v Slovenskej republike.",
+    "img": "/assets/images/titulna fotka.jpg",
+    "primaryAction": {
+      "text": "Get started",
+      "href": "#"
+    },
+    "secondaryAction": {
+      "text": "Email us",
+      "href": "mailto:issaafakattan@gmail.com?subject=I like react landing page!"
+    }
+  },
+  "product": {
+    "title": "React landing page 2021",
+    "items": [
+      {
+        "title": "A plug n play template",
+        "description": "Just edit the config.json file with details about your company and voila your beautiful state of the art landing page is ready to go live! Remember to also update your assets, add any images you want to show to /assets/images and link them in the config.json",
+        "img": "/assets/images/product1.jpg"
+      },
+      {
+        "title": "Make it your own!",
+        "description": "Play around with the theme.ts file and configure the color palette to match the branding of your company! If you're feeling wild, maybe change some tailwind css as well!",
+        "img": "/assets/images/product2.jpg"
+      }
+    ]
+  },
+  "features": {
+    "title": "Latest & greatest ",
+    "subtitle": "All the best technologies out there!",
+    "description": "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English.",
+    "items": [
+      {
+        "name": "React.js",
+        "description": "React is a free and open-source front-end JavaScript library for building user interfaces or UI components.",
+        "icon": "/assets/images/react.png"
+      },
+      {
+        "name": "Tailwind",
+        "description": "Tailwind CSS is a highly customizable, low-level CSS framework for quickly creating beautiful designs without any annoying opinionated stylesheet nonsense.",
+        "icon": "/assets/images/tailwindcss.svg"
+      },
+      {
+        "name": "Next.js",
+        "description": "Next.js is a framework for server-rendered React applications using Next.js.",
+        "icon": "/assets/images/nextjs.svg"
+      },
+      {
+        "name": "Typescript",
+        "description": "TypeScript is a programming language developed and maintained by Microsoft.",
+        "icon": "/assets/images/ts.png"
+      }
+    ]
+  },
+  "team": {
+    "members": [
+      {
+        "name": "Matúš Dopiriak",
+        "role": "Tajomník",
+        "image": "/assets/images/team_member_01.jpg"
+      },
+      {
+        "name": "Peter Štefaňák",
+        "role": "Predseda",
+        "image": "/assets/images/team_member_02.jpeg"
+      },
+      {
+        "name": "Peter Medviď",
+        "role": "Tlačový hovorca",
+        "image": "/assets/images/team_member_03.jpeg"
+      },
+      {
+        "name": "Miloš Stronček",
+        "role": "Člen zastupujúci organizácie (Okresná organizácia Rusínskej obrody vo Svidníku)",
+        "image": "/assets/images/team_member_04.jpeg"
+      },
+      {
+        "name": "Martin Karaš",
+        "role": "Člen Rady vlády SR pre národnostné menšiny (ex offo)",
+        "image": "/assets/images/team_member_06.jpg"
+      },
+      {
+        "name": "Jozef Badida",
+        "role": "Člen zastupujúci individuálnych členov",
+        "image": "/assets/images/team_member_05.jpg"
+      }
+    ]
+  },
+  "about": {
+    "sections": [
+      {
+        "name": "Something",
+        "href": "#",
+        "content": "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English."
+      },
+      {
+        "name": "Something",
+        "href": "#",
+        "content": "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English."
+      },
+      {
+        "name": "Something",
+        "href": "#",
+        "content": "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English."
+      },
+      {
+        "name": "Something",
+        "href": "#",
+        "content": "It is a long established fact that a reader will be distracted by the readable content of a page when looking at its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as opposed to using 'Content here, content here', making it look like readable English."
+      }
+    ],
+    "socialMedia": {
+      "github": "https://github.com/issaafalkattan",
+      "twitter": "https://twitter.com/issaafkattan",
+      "linkedin": "https://www.linkedin.com/in/issaaf-kattan/"
+    }
+  }
+}
