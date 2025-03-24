@@ -146,7 +146,7 @@ const SimpleBlog = () => {
     const fetchPosts = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:1337/api/blogs?populate=*');
+        const response = await fetch('https://backend-strapi-kdju.onrender.com/api/blogs?populate=*');
         const data: StrapiResponse = await response.json();
         setPosts(data.data || []);
       } catch (error) {
@@ -165,7 +165,7 @@ const SimpleBlog = () => {
       // Ak existuje medium formát, použijeme ho, inak použijeme pôvodný URL
       const imageUrl = post.titulnyobrazok.formats?.medium?.url || post.titulnyobrazok.url;
       // Ak URL začína '/', pripojíme server URL
-      return imageUrl.startsWith('/') ? `http://localhost:1337${imageUrl}` : imageUrl;
+      return imageUrl.startsWith('/') ? `https://backend-strapi-kdju.onrender.com${imageUrl}` : imageUrl;
     }
     return 'https://via.placeholder.com/150'; // Fallback obrázok
   };
