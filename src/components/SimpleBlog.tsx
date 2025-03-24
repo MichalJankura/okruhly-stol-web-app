@@ -172,7 +172,7 @@ const SimpleBlog = () => {
 
   return (
     <div
-      id="news"
+      id="blog_news"
       className="min-h-screen relative bg-cover bg-center bg-no-repeat py-10 lg:py-0"
       style={{
         backgroundImage: 'url("assets/images/events.jpeg")',
