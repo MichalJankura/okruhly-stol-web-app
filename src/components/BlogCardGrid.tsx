@@ -191,10 +191,10 @@ const BlogCardGrid = () => {
     const fetchFilterOptions = async () => {
       try {
         const [yearsRes, monthsRes, categoriesRes, authorsRes] = await Promise.all([
-          fetch('https://okruhly-stol-web-app-s9d9.onrender.com/years').then(res => res.json()),
-          fetch('https://okruhly-stol-web-app-s9d9.onrender.com/months').then(res => res.json()),
-          fetch('https://okruhly-stol-web-app-s9d9.onrender.com/categories').then(res => res.json()),
-          fetch('https://okruhly-stol-web-app-s9d9.onrender.com/authors').then(res => res.json())
+          fetch('https://okruhly-stol-web-app-s9d9.onrender.com/api/years').then(res => res.json()),
+          fetch('https://okruhly-stol-web-app-s9d9.onrender.com/api/months').then(res => res.json()),
+          fetch('https://okruhly-stol-web-app-s9d9.onrender.com/api/categories').then(res => res.json()),
+          fetch('https://okruhly-stol-web-app-s9d9.onrender.com/api/authors').then(res => res.json())
         ]);
 
         console.log('Categories Response:', categoriesRes);
@@ -260,8 +260,8 @@ const BlogCardGrid = () => {
         if (selectedAuthor !== 'All') queryParams.append('location', selectedAuthor);
         if (searchQuery) queryParams.append('search', searchQuery);
 
-        console.log('Fetching from URL:', `https://okruhly-stol-web-app-s9d9.onrender.com/blog-posts?${queryParams}`);
-        const response = await fetch(`https://okruhly-stol-web-app-s9d9.onrender.com/blog-posts?${queryParams}`);
+        console.log('Fetching from URL:', `https://okruhly-stol-web-app-s9d9.onrender.com/api/blog-posts?${queryParams}`);
+        const response = await fetch(`https://okruhly-stol-web-app-s9d9.onrender.com/api/blog-posts?${queryParams}`);
         
         if (!response.ok) {
           console.error('Response not OK:', response.status, response.statusText);
