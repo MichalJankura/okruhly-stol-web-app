@@ -41,28 +41,6 @@ interface CategoryOption {
   count: number;
 }
 
-// interface ApiResponse {
-//   posts: Array<{
-//     id: number;
-//     title: string;
-//     author: string;
-//     category: string;
-//     date: string;
-//     month: string;
-//     short_text: string;
-//     full_text: string;
-//     image: string;
-//     event_start_date?: string;
-//     event_end_date?: string;
-//     start_time?: string;
-//     end_time?: string;
-//     tickets?: string;
-//     link_to?: string;
-//   }>;
-//   total: number;
-//   page: number;
-//   pages: number;
-// }
 
 const BlogCard = ({
                     title,
