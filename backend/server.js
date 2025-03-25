@@ -3,6 +3,7 @@ const express = require('express');
 const { Pool } = require('pg');
 const cors = require('cors');
 const path = require('path');
+const bcrypt = require('bcrypt');
 require('dotenv').config({ path: path.join(__dirname, 'database.env') });
 
 const app = express();
@@ -370,7 +371,55 @@ app.get('/api/authors', async (req, res) => {
     }
 });
 
-app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-    console.log(`API available at http://localhost:${port}/api`);
+// Registration endpoint
+app.post('/api/register', async (req, res) => {
+  try {
+    const { email, password, first_name, last_name } = req.body;
+
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    // Check if user already exists
+    const userExists = await pool.query(
+      'SELECT * FROM users WHERE email = $1',
+      [email]
+    );
+
+    if (userExists.rows.length > 0) {
+      return res.status(400).json({ error: 'User already exists' });
+    }
+
+    // Hash password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // Insert new user
+    const result = await pool.query(
+      `INSERT INTO users (email, password, first_name, last_name)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, email, first_name, last_name`,
+      [email, hashedPassword, first_name, last_name]
+    );
+
+    res.status(201).json({
+      message: 'User registered successfully',
+      user: {
+        id: result.rows[0].id,
+        email: result.rows[0].email,
+        firstName: result.rows[0].first_name,
+        lastName: result.rows[0].last_name
+      }
+    });
+
+  } catch (err) {
+    console.error('Registration error:', err);
+    res.status(500).json({ error: 'Registration failed' });
+  }
+});
+
+app.listen(port, host, () => {
+    console.log(`Server running at http://${host}:${port}`);
+    console.log(`API available at http://${host}:${port}/api`);
 });
