@@ -9,6 +9,7 @@ require('dotenv').config({ path: path.join(__dirname, 'database.env') });
 const app = express();
 const port = process.env.PORT || 10000;
 
+
 // Middleware
 app.use(cors());
 app.use(express.json());
