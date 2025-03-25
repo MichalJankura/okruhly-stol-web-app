@@ -7,7 +7,7 @@ const bcrypt = require('bcrypt');
 require('dotenv').config({ path: path.join(__dirname, 'database.env') });
 
 const app = express();
-const port = process.env.PORT || 10000;
+const port = process.env.PORT || 3000;
 
 
 // Middleware
@@ -420,7 +420,6 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-app.listen(port, host, () => {
-    console.log(`Server running at http://${host}:${port}`);
-    console.log(`API available at http://${host}:${port}/api`);
+app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
 });
