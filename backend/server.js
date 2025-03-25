@@ -11,7 +11,10 @@ const port = process.env.PORT || 3000;
 
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: ['http://localhost:3000', 'https://okruhly-stol-web-app-s9d9.onrender.com'],
+    credentials: true
+}));
 app.use(express.json());
 
 // PostgreSQL connection pool
