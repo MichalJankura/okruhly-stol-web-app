@@ -11,10 +11,7 @@ const port = process.env.PORT || 3000;
 
 
 // Middleware
-app.use(cors({
-    origin: ['http://localhost:3000', 'https://okruhly-stol-web-app-s9d9.onrender.com'],
-    credentials: true
-}));
+app.use(cors());
 app.use(express.json());
 
 // PostgreSQL connection pool
@@ -403,7 +400,7 @@ app.post('/api/register', async (req, res) => {
     const result = await pool.query(
       `INSERT INTO users (email, password_hash, first_name, last_name)
        VALUES ($1, $2, $3, $4)
-       RETURNING id, email, first_name, last_name`,
+       RETURNING user_id, email, first_name, last_name`,
       [email, hashedPassword, first_name, last_name]
     );
 
