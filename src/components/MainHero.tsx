@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import Login from "./Registration/Login";
+import Register from "./Registration/Register";
 // import RainEffect from "./Animations/RainEffect";
 // import FallingLeaves from "./Animations/FallingLeaves";
 import RainEffect from "./Animations/RainEffect";
@@ -7,6 +8,21 @@ import RotatingText from "./Animations/FlopingText";
 
 const MainHero = () => {
   const [showLogin, setShowLogin] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
+
+  const handleRegisterClick = () => {
+    setShowLogin(false);
+    setShowRegister(true);
+  };
+
+  const handleLoginClick = () => {
+    setShowRegister(false);
+    setShowLogin(true);
+  };
+
+  const handleCloseLogin = () => {
+    setShowLogin(false);
+  };
 
   return (
     
@@ -61,12 +77,6 @@ const MainHero = () => {
                 >
                   Prihlásiť sa
                 </button>
-                <a
-                  href="#"
-                  className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-md"
-                >
-                  Registrovať sa
-                </a>
               </div>
             </div>
             <div className="md:w-1/2 lg:w-1/3 mt-8 md:mt-0 md:pl-12">
@@ -90,7 +100,23 @@ const MainHero = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <Login />
+            <Login onRegisterClick={handleRegisterClick} onClose={handleCloseLogin} />
+          </div>
+        </div>
+      )}
+
+      {showRegister && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="relative">
+            <button
+              onClick={() => setShowRegister(false)}
+              className="absolute -top-4 -right-4 bg-white rounded-full p-2 text-gray-600 hover:text-gray-800 shadow-lg"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <Register onLoginClick={handleLoginClick} />
           </div>
         </div>
       )}

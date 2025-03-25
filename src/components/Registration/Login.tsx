@@ -1,10 +1,75 @@
 import { useState } from "react";
+import { useRouter } from "next/router";
+import { eventEmitter } from '../../utils/events';
 
-export default function Login() {
+interface LoginProps {
+  onRegisterClick: () => void;
+  onClose: () => void;
+}
+
+export default function Login({ onRegisterClick, onClose }: LoginProps) {
   const [showPassword, setShowPassword] = useState(false);
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+  });
+  const [error, setError] = useState("");
+  const router = useRouter();
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    try {
+      const response = await fetch('https://okruhly-stol-web-app-s9d9.onrender.com/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+      console.log('Full API Response:', data);
+      console.log('User data from API:', data.user);
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      // Store the token in localStorage
+      localStorage.setItem('token', data.token);
+      
+      if (data.user) {
+        console.log('Storing user data:', data.user);
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
+
+      // Close the login component
+      onClose();
+
+      // Emit auth change event
+      eventEmitter.emit('authChange');
+      
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err instanceof Error ? err.message : 'Login failed');
+    }
   };
 
   return (
@@ -14,15 +79,27 @@ export default function Login() {
           <h2 className="font-bold text-3xl text-[#002D74]">Login</h2>
           <p className="text-sm mt-4 text-[#002D74]">If you already a member, easily log in now.</p>
 
-          <form action="" className="flex flex-col gap-4">
-            <input className="p-2 mt-8 rounded-xl border" type="email" name="email" placeholder="Email" />
+          {error && <p className="text-red-600 mt-2">{error}</p>}
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <input 
+              className="p-2 mt-8 rounded-xl border" 
+              type="email" 
+              name="email" 
+              placeholder="Email"
+              value={formData.email}
+              onChange={handleChange}
+              required 
+            />
             <div className="relative">
               <input 
                 className="p-2 rounded-xl border w-full" 
                 type={showPassword ? "text" : "password"} 
                 name="password" 
-                id="password" 
-                placeholder="Password" 
+                placeholder="Password"
+                value={formData.password}
+                onChange={handleChange}
+                required 
               />
               {!showPassword ? (
                 <svg 
@@ -60,7 +137,12 @@ export default function Login() {
                 </svg>
               )}
             </div>
-            <button className="bg-[#002D74] text-white py-2 rounded-xl hover:scale-105 duration-300 hover:bg-[#206ab1] font-medium" type="submit">Login</button>
+            <button 
+              className="bg-[#002D74] text-white py-2 rounded-xl hover:scale-105 duration-300 hover:bg-[#206ab1] font-medium" 
+              type="submit"
+            >
+              Login
+            </button>
           </form>
           <div className="mt-6 items-center text-gray-100">
             <hr className="border-gray-300" />
@@ -78,9 +160,14 @@ export default function Login() {
           </button>
           <div className="mt-10 text-sm border-b border-gray-500 py-5 playfair tooltip">Forget password?</div>
 
-          <div className="mt-4 text-sm flex justify-between items-center container-mr">
-            <p className="mr-3 md:mr-0 ">If you don't have an account..</p>
-            <button className="hover:border register text-white bg-[#002D74] hover:border-gray-400 rounded-xl py-2 px-5 hover:scale-110 hover:bg-[#002c7424] font-semibold duration-300">Register</button>
+          <div className="mt-4 text-sm flex justify-between items-center">
+            <p>Don't have an account?</p>
+            <button 
+              onClick={onRegisterClick}
+              className="hover:border register text-white bg-[#002D74] hover:border-gray-400 rounded-xl py-2 px-5 hover:scale-110 hover:bg-[#002c7424] font-semibold duration-300"
+            >
+              Register
+            </button>
           </div>
         </div>
         <div className="md:block hidden w-1/2">
