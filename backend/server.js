@@ -398,7 +398,7 @@ app.post('/api/register', async (req, res) => {
 
     // Insert new user
     const result = await pool.query(
-      `INSERT INTO users (email, password, first_name, last_name)
+      `INSERT INTO users (email, password_hash, first_name, last_name)
        VALUES ($1, $2, $3, $4)
        RETURNING id, email, first_name, last_name`,
       [email, hashedPassword, first_name, last_name]
