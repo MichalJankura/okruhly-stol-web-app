@@ -3,7 +3,7 @@ import Login from "./Registration/Login";
 import Register from "./Registration/Register";
 // import RainEffect from "./Animations/RainEffect";
 // import FallingLeaves from "./Animations/FallingLeaves";
-import RainEffect from "./Animations/RainEffect";
+// import RainEffect from "./Animations/RainEffect";
 import RotatingText from "./Animations/FlopingText";
 import { eventEmitter } from '../utils/events';
 
@@ -53,7 +53,7 @@ const MainHero = () => {
           backgroundPosition: "center",
         }}
       >
-        <RainEffect />
+{/*         <RainEffect /> */}
         {/* <FallingLeaves /> */}
         <div className="container mx-auto px-6 md:px-12">
           <div className="flex flex-col md:flex-row items-center">
