@@ -149,7 +149,7 @@ import React, { useState } from "react";
 import Login from "./Registration/Login";
 // import RainEffect from "./Animations/RainEffect";
 // import FallingLeaves from "./Animations/FallingLeaves";
-import RainEffect from "./Animations/RainEffect";
+// import RainEffect from "./Animations/RainEffect";
 import RotatingText from "./Animations/FlopingText";
 
 const MainHero = () => {
