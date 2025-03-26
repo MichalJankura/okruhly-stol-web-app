@@ -90,40 +90,6 @@ const BlogCard = ({
   };
 
   // Function to get tag color based on category
-  const getTagColor = (category: string) => {
-    switch (category.toLowerCase()) {
-      case 'divadlo':
-        return 'bg-purple-600';
-      case 'gastropodujatie':
-        return 'bg-orange-500';
-      case 'kategória neznáma':
-        return 'bg-gray-500';
-      case 'koncert':
-        return 'bg-blue-500';
-      case 'kultúrne podujatie':
-        return 'bg-indigo-500';
-      case 'ostatné':
-        return 'bg-gray-600';
-      case 'podujatie pre deti':
-        return 'bg-pink-500';
-      case 'prednáška':
-        return 'bg-red-500';
-      case 'sprevádzanie':
-        return 'bg-teal-500';
-      case 'trh / jarmok / burza':
-        return 'bg-amber-500';
-      case 'typ neznámy':
-        return 'bg-gray-400';
-      case 'vernisáž / výstava':
-        return 'bg-green-500';
-      case 'výstava':
-        return 'bg-emerald-500';
-      case 'výstavy':
-        return 'bg-lime-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
 
   return (
       <div className="relative">
