@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useRouter } from "next/router";
 import { eventEmitter } from '../../utils/events';
 
 interface LoginProps {
@@ -14,7 +13,6 @@ export default function Login({ onRegisterClick, onClose }: LoginProps) {
     password: "",
   });
   const [error, setError] = useState("");
-  const router = useRouter();
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
