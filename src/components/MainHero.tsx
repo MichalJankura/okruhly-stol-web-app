@@ -1,14 +1,32 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Login from "./Registration/Login";
 import Register from "./Registration/Register";
 // import RainEffect from "./Animations/RainEffect";
 // import FallingLeaves from "./Animations/FallingLeaves";
 import RainEffect from "./Animations/RainEffect";
 import RotatingText from "./Animations/FlopingText";
+import { eventEmitter } from '../utils/events';
 
 const MainHero = () => {
   const [showLogin, setShowLogin] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    setIsLoggedIn(!!token);
+
+    // Listen for auth changes
+    const handleAuthChange = () => {
+      const token = localStorage.getItem('token');
+      setIsLoggedIn(!!token);
+    };
+
+    const unsubscribe = eventEmitter.subscribe('authChange', handleAuthChange);
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
 
   const handleRegisterClick = () => {
     setShowLogin(false);
@@ -70,14 +88,16 @@ const MainHero = () => {
                 </div>
               </div>
 
-              <div className="flex gap-5 sm:py-20 lg:py-20">
-                <button
-                  onClick={() => setShowLogin(true)}
-                  className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-6 rounded-md"
-                >
-                  Prihlásiť sa
-                </button>
-              </div>
+              {!isLoggedIn && (
+                <div className="flex gap-5 sm:py-20 lg:py-20">
+                  <button
+                    onClick={() => setShowLogin(true)}
+                    className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-6 rounded-md"
+                  >
+                    Prihlásiť sa
+                  </button>
+                </div>
+              )}
             </div>
             <div className="md:w-1/2 lg:w-1/3 mt-8 md:mt-0 md:pl-12">
               <img

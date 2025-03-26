@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import RecommendedEventsSlider from './RecommendedEventsSlider';
 
 interface BlogCardProps {
   title: string;
@@ -8,6 +9,10 @@ interface BlogCardProps {
   shortText: string;
   fullText: string;
   image: string;
+  event_start_date?: string;
+  event_end_date?: string;
+  start_time?: string;
+  end_time?: string;
 }
 
 interface BlogArticle {
@@ -50,6 +55,8 @@ const BlogCard = ({
                     shortText,
                     fullText,
                     image,
+                    event_start_date,
+                    start_time,
                   }: BlogCardProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -59,60 +66,146 @@ const BlogCard = ({
     setImageError(true);
   };
 
+  // Function to get tag color based on author/location
+  const getLocationColor = (author: string) => {
+    // Generate a consistent color based on the author string
+    const hash = author.split('').reduce((acc, char) => {
+      return char.charCodeAt(0) + ((acc << 5) - acc);
+    }, 0);
+
+    const colors = [
+      'bg-blue-500',
+      'bg-green-500',
+      'bg-purple-500',
+      'bg-orange-500',
+      'bg-pink-500',
+      'bg-indigo-500',
+      'bg-teal-500',
+      'bg-red-500',
+      'bg-yellow-500',
+      'bg-cyan-500'
+    ];
+
+    return colors[Math.abs(hash) % colors.length];
+  };
+
+  // Function to get tag color based on category
+  const getTagColor = (category: string) => {
+    switch (category.toLowerCase()) {
+      case 'divadlo':
+        return 'bg-purple-600';
+      case 'gastropodujatie':
+        return 'bg-orange-500';
+      case 'kategória neznáma':
+        return 'bg-gray-500';
+      case 'koncert':
+        return 'bg-blue-500';
+      case 'kultúrne podujatie':
+        return 'bg-indigo-500';
+      case 'ostatné':
+        return 'bg-gray-600';
+      case 'podujatie pre deti':
+        return 'bg-pink-500';
+      case 'prednáška':
+        return 'bg-red-500';
+      case 'sprevádzanie':
+        return 'bg-teal-500';
+      case 'trh / jarmok / burza':
+        return 'bg-amber-500';
+      case 'typ neznámy':
+        return 'bg-gray-400';
+      case 'vernisáž / výstava':
+        return 'bg-green-500';
+      case 'výstava':
+        return 'bg-emerald-500';
+      case 'výstavy':
+        return 'bg-lime-500';
+      default:
+        return 'bg-gray-500';
+    }
+  };
+
   return (
-      <div className="h-full flex flex-col border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 bg-white">
-        <a
-            className="group cursor-pointer flex flex-col h-full"
-            onClick={() => setIsOpen(true)}
-        >
-          <div className="relative w-full h-48 overflow-hidden">
-            <img
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-in-out"
-                src={imageError ? fallbackImage : image}
-                alt={title}
-                onError={handleImageError}
-            />
-          </div>
-          <div className="p-4 flex flex-col flex-grow">
-            <h3 className="text-xl font-semibold text-gray-800 group-hover:text-gray-600 line-clamp-2 mb-2">
-              {title}
-            </h3>
-            <p className="text-sm text-gray-500 mb-2">
-              {author} - {category} - {date}
-            </p>
-            <p className="mt-1 text-gray-600 line-clamp-3 flex-grow">
-              {shortText}
-            </p>
-            <div className="mt-4 text-blue-600 text-sm font-medium">
-              Čítať viac
-            </div>
-          </div>
-        </a>
-        {isOpen && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
-              <div className="bg-white p-6 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <h3 className="text-2xl font-bold mb-2">{title}</h3>
-                <p className="text-sm text-gray-500 mb-4">
-                  {author} - {category} - {date}
-                </p>
-                <div className="relative w-full h-64 overflow-hidden rounded mb-4">
+      <div className="relative">
+          <div 
+              className="bg-white rounded-lg shadow-lg overflow-hidden w-full cursor-pointer transition-all duration-200 hover:-translate-y-1"
+              onClick={() => setIsOpen(true)}
+          >
+              <div className="flex flex-col h-full">
+                <div className="relative w-full h-[200px] overflow-hidden">
                   <img
                       className="w-full h-full object-cover"
                       src={imageError ? fallbackImage : image}
                       alt={title}
                       onError={handleImageError}
                   />
+                  {event_start_date && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 text-sm">
+                      {new Date(event_start_date).toLocaleDateString('sk-SK')}
+                      {start_time && ` - ${start_time}`}
+                    </div>
+                  )}
                 </div>
-                <div className="text-gray-700 prose max-w-none">{fullText}</div>
-                <button
-                    className="mt-6 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
-                    onClick={() => setIsOpen(false)}
-                >
-                  Zavrieť
-                </button>
+                <div className="p-5 flex flex-col min-h-[250px]">
+                  <span className={`inline-block text-xs text-white px-2.5 py-0.5 rounded-full w-fit ${getLocationColor(author)}`}>
+                    {author}
+                  </span>
+                  <h4 className="mt-2.5 text-lg font-semibold line-clamp-2">{title}</h4>
+                  <p className="text-sm text-gray-600 mt-0 mb-10 line-clamp-2">{shortText}</p>
+                  <div className="mt-auto flex items-center">
+                    <img
+                      src={`https://ui-avatars.com/api/?name=${encodeURIComponent(author)}&background=random`}
+                      alt={author}
+                      className="w-10 h-10 rounded-full mr-2.5"
+                    />
+                    <div>
+                      <h5 className="text-sm font-medium">{category}</h5>
+                      <small className="text-gray-500">{date}</small>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-        )}
+          </div>
+          {isOpen && (
+              <div 
+                className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50"
+                onClick={() => setIsOpen(false)}
+              >
+                <div 
+                  className="bg-white p-6 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <h3 className="text-2xl font-bold mb-2">{title}</h3>
+                  <p className="text-sm text-gray-500 mb-4">
+                    {author} - {category} - {date}
+                  </p>
+                  <div className="relative w-full h-64 overflow-hidden rounded mb-4">
+                    <img
+                        className="w-full h-full object-cover"
+                        src={imageError ? fallbackImage : image}
+                        alt={title}
+                        onError={handleImageError}
+                    />
+                    {event_start_date && (
+                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white p-2 text-sm">
+                        {new Date(event_start_date).toLocaleDateString('sk-SK')}
+                        {start_time && ` - ${start_time}`}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-gray-700 prose max-w-none">{fullText}</div>
+                  <button
+                      className="mt-6 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsOpen(false);
+                      }}
+                  >
+                    Zavrieť
+                  </button>
+                </div>
+              </div>
+          )}
       </div>
   );
 };
@@ -323,6 +416,10 @@ const BlogCardGrid = () => {
           <h2 className="text-4xl font-extrabold text-center tracking-wide text-white sm:text-6xl md:text-6x1 mb-10">
             Novinky a udalosti
           </h2>
+          
+          {/* Add RecommendedEventsSlider here */}
+          <RecommendedEventsSlider />
+
           <div className="flex flex-col md:flex-row gap-6 flex-grow py-10">
             <div className="w-full md:w-1/5 pl-0 bg-white bg-opacity-90 p-5 rounded-lg h-fit max-h-[calc(100vh-340px)] overflow-y-auto sticky top-24">
               <h3 className="text-center font-bold px-16 text-2xl">Filter</h3>
@@ -503,6 +600,10 @@ const BlogCardGrid = () => {
                             shortText={article.shortText}
                             fullText={article.fullText}
                             image={article.image}
+                            event_start_date={article.event_start_date}
+                            event_end_date={article.event_end_date}
+                            start_time={article.start_time}
+                            end_time={article.end_time}
                         />
                     ))
                 ) : (
