@@ -146,7 +146,7 @@
 
 // export default MainHero;
 import React, { useState } from "react";
-import Login from "./Registration/Login";
+// import Login from "./Registration/Login";
 // import RainEffect from "./Animations/RainEffect";
 // import FallingLeaves from "./Animations/FallingLeaves";
 // import RainEffect from "./Animations/RainEffect";
@@ -237,7 +237,7 @@ const MainHero = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <Login />
+{/*             <Login /> */}
           </div>
         </div>
       )}
