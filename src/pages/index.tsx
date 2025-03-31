@@ -9,20 +9,23 @@ import Membership from '../components/Membership';
 import Team from '../components/Team';
 import Navbar from '../components/Navbar';
 import SimpleBlog from '../components/SimpleBlog';
+import MainHeroImage from '../components/MainHeroImage';
 
 const App = () => {
   return (
-    <div className={`bg-background grid gap-y-0 overflow-hidden`}>
+    <div className={`bg-gradient-to-br from-slate-50 to-slate-100 grid gap-y-0 overflow-hidden`}>
       <Navbar />
       <div className={`relative bg-background`}>
+      <MainHero />
         <div className="max-w-7xl mx-auto">
+        <MainHeroImage />
         </div>
-        
       </div>
       
       <LazyShow>
         <>
-        <MainHero />
+        
+        
         </>
       </LazyShow>
       
@@ -37,11 +40,11 @@ const App = () => {
           <BlogCardGrid />
         </>
       </LazyShow>
-      <LazyShow>
+      {/* <LazyShow>
         <>
-          {/* <Gallery /> */}
+          <Gallery />
         </>
-      </LazyShow>
+      </LazyShow> */}
       <LazyShow>
         <>
           {/* <Features /> */}
