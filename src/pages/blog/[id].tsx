@@ -125,7 +125,7 @@ const BlogDetail = () => {
   const getImageUrl = (post: StrapiPost) => {
     if (post.titulnyobrazok) {
       const imageUrl = post.titulnyobrazok.formats?.medium?.url || post.titulnyobrazok.url;
-      return imageUrl.startsWith('/') ? `https://backend-strapi-kdju.onrender.com/${imageUrl}` : imageUrl;
+      return imageUrl.startsWith('/') ? `https://backend-strapi-kdju.onrender.com${imageUrl}` : imageUrl;
     }
     return 'https://via.placeholder.com/800x400?text=Bez+obrázku';
   };
