@@ -1,6 +1,6 @@
 const Contact = () => {
   return (
-    <section className="bg-white dark:bg-gray-900" id="contact">
+    <section className="bg-white dark:bg-gray-900 min-h-screen" id="contact">
       <div className="container mx-auto px-6 py-12">
         <div>
           <p className="text-blue-500 dark:text-blue-400 font-medium">Kontaktujte nás</p>
@@ -42,6 +42,19 @@ const Contact = () => {
               </button>
             </form>
           </div>
+        </div>
+
+        <div className="mt-12 h-[50vh] w-full rounded-lg overflow-hidden">
+          <iframe
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2641.8383484567!2d21.2353986!3d48.9977246!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x473eed62a563a9ef%3A0xb18994e09e7a9e06!2sJarkov%C3%A1%203110%2F77%2C%20080%2001%20Pre%C5%A1ov!5e0!3m2!1ssk!2ssk!4v1709912345678!5m2!1ssk!2ssk"
+            width="100%"
+            height="100%"
+            style={{ border: 0 }}
+            allowFullScreen
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            className="rounded-lg"
+          ></iframe>
         </div>
       </div>
     </section>
