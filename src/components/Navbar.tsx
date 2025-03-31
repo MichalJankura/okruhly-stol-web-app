@@ -2,8 +2,6 @@ import { Disclosure as HeadlessDisclosure, Menu as HeadlessMenu } from '@headles
 import { Bars3Icon, BellIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import config from '../config/index.json'
-import { useState, useEffect } from 'react'
-import { eventEmitter } from '../utils/events'
 
 // Updated downloadItems to use real document files
 const downloadItems = [
@@ -46,58 +44,11 @@ const handleDocumentDownload = (e: React.MouseEvent<HTMLAnchorElement>, fileName
   window.open(filePath, '_blank');
 };
 
-// Add this interface for TypeScript
-interface User {
-  firstName?: string;  // Changed from first_name
-  lastName?: string;   // Changed from last_name
-  email: string;
-}
-
 export default function Navbar() {
-  const [user, setUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    // Check for user data in localStorage when component mounts
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      const parsedUser = JSON.parse(userData);
-      console.log('Loaded user data:', parsedUser);
-      setUser(parsedUser);
-    }
-
-    // Subscribe to auth changes
-    const unsubscribe = eventEmitter.subscribe('authChange', () => {
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        const parsedUser = JSON.parse(userData);
-        console.log('Updated user data:', parsedUser);
-        setUser(parsedUser);
-      } else {
-        setUser(null);
-      }
-    });
-
-    // Cleanup subscription
-    return () => unsubscribe();
-  }, []);
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setUser(null);
-    eventEmitter.emit('authChange');
-  };
-
   return (
     <HeadlessDisclosure as="nav" 
       className="relative bg-cover bg-center"
       >
-        <div className="absolute inset-0" style={{
-          backgroundImage: "url('/assets/images/background.jpeg')",
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}></div>
-      {/* Add a semi-transparent overlay for better text readability */}
       <div className="absolute inset-0 bg-[#0055a1] opacity-85 z-0"></div>
       
       <div className="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8 relative z-10">
@@ -112,13 +63,6 @@ export default function Navbar() {
             </HeadlessDisclosure.Button>
           </div>
           <div className="flex flex-1 items-center justify-center sm:items-stretch sm:justify-start">
-            {/* <div className="flex shrink-0 items-center">
-              <img
-                alt="OSRS"
-                src="../assets/images/osrs.png"
-                className="h-8 w-auto"
-              />
-            </div> */}
             <div className="hidden sm:ml-6 sm:block">
               <div className="flex space-x-4">
                 {navigation.map((item) => 
@@ -182,13 +126,6 @@ export default function Navbar() {
               <BellIcon aria-hidden="true" className="size-6" />
             </button>
 
-            {/* Add user name display */}
-            {user && (
-              <span className="ml-3 text-white font-medium flex items-center">
-                Hi, {user.firstName || 'User'} 👋
-              </span>
-            )}
-
             {/* Profile dropdown */}
             <HeadlessMenu as="div" className="relative ml-3">
               <div>
@@ -197,7 +134,7 @@ export default function Navbar() {
                   <span className="sr-only">Open user menu</span>
                   <img
                     alt=""
-                    src={user ? "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" : ""}
+                    src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
                     className="size-8 rounded-full"
                   />
                 </HeadlessMenu.Button>
@@ -223,12 +160,12 @@ export default function Navbar() {
                   </a>
                 </HeadlessMenu.Item>
                 <HeadlessMenu.Item>
-                  <button
-                    onClick={handleLogout}
-                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 data-focus:bg-gray-100 data-focus:outline-hidden"
+                  <a
+                    href="#"
+                    className="block px-4 py-2 text-sm text-gray-700 data-focus:bg-gray-100 data-focus:outline-hidden"
                   >
                     Sign out
-                  </button>
+                  </a>
                 </HeadlessMenu.Item>
               </HeadlessMenu.Items>
             </HeadlessMenu>
