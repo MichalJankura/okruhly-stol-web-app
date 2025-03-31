@@ -83,7 +83,7 @@ const SimpleBlog = () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetch('http://localhost:1337/api/blogs?populate=*');
+        const response = await fetch('https://backend-strapi-kdju.onrender.com/api/blogs?populate=*');
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -194,7 +194,7 @@ const SimpleBlog = () => {
   const getImageUrl = (post: StrapiPost) => {
     if (post.titulnyobrazok) {
       const imageUrl = post.titulnyobrazok.formats?.medium?.url || post.titulnyobrazok.url;
-      return imageUrl.startsWith('/') ? `http://localhost:1337${imageUrl}` : imageUrl;
+      return imageUrl.startsWith('/') ? `https://backend-strapi-kdju.onrender.com${imageUrl}` : imageUrl;
     }
     return 'https://via.placeholder.com/150';
   };
