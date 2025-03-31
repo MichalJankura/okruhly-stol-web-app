@@ -10,6 +10,15 @@ const MainHero = () => {
     { id: 3, number: "500+", label: "Events Hosted", icon: <FaCalendarAlt /> }
   ];
 
+  const handleRegisterClick = () => {
+    // TODO: Implement registration logic
+    console.log("Register clicked");
+  };
+
+  const handleClose = () => {
+    setShowLogin(false);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="container mx-auto px-4 py-12 md:py-20">
@@ -65,14 +74,14 @@ const MainHero = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="relative">
             <button
-              onClick={() => setShowLogin(false)}
+              onClick={handleClose}
               className="absolute -top-4 -right-4 bg-white rounded-full p-2 text-gray-600 hover:text-gray-800 shadow-lg z-50"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <Login />
+            <Login onRegisterClick={handleRegisterClick} onClose={handleClose} />
           </div>
         </div>
       )}
