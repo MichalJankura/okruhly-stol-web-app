@@ -1,59 +1,41 @@
 import React from 'react';
+
 import config from '../config/index.json';
-import styles from './Animations/TeamAnimation.module.css';
 
 const Team = () => {
   const { team } = config;
-  const teamMembers = team.members;
-
-  // Funkcia na určenie, či je tooltip na ľavej strane
-  const isLeftSide = (index: number, total: number) => {
-    // Ak index je v pravej polovici kruhu (horná a pravá strana), tooltip bude na ľavej strane
-    const halfCount = Math.ceil(total / 2);
-    return index >= Math.floor(total / 4) && index < halfCount + Math.floor(total / 4);
-  };
 
   return (
-    <section className={`${styles.section} ${styles.teamContainer}`} id="team">
-      <div className={styles["section-wrapper"]}>
-        <header className={styles.header}>
-          <hgroup className={styles.hgroup}>
-            <h2 className={styles.headline}>Predsedníctvo</h2>
-            <p className={styles.tagline}>Okrúhly stôl Rusínov Slovenska</p>
-          </hgroup>
-        </header>
-        
-        <ul className={styles.cards} style={{ '--nth-siblings': teamMembers.length - 1 } as React.CSSProperties}>
-          {teamMembers.map((member, index) => {
-            const leftSide = isLeftSide(index, teamMembers.length);
-            
-            return (
-              <li 
-                key={member.name} 
-                className={styles.card} 
-                style={{ '--nth-child': index + 1 } as React.CSSProperties}
-              >
-                <div className={styles["avatar-link-wrapper"]}>
-                  <div className={styles.visual}>
-                    <img 
-                      className={styles["avatar-img"]}
-                      src={member.image}
-                      width="144" 
-                      height="144" 
-                      alt={`${member.name}, ${member.role}`} 
-                    />
-                  </div>
-                  <div className={`${styles.tooltiptext} ${leftSide ? styles['left-tooltip'] : ''}`}>
-                    <h3 className={styles["team-name"]}>{member.name}</h3>
-                    <div className={styles["team-content-wrapper"]}>
-                      <p className={styles["team-title"]}>{member.role}</p>
-                    </div>
-                  </div>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+    <section>
+      {/* Container */}
+      <div
+        className="bg-gradient-to-br from-slate-50 to-slate-100 mx-auto w-full max-w-7xl px-5 py-16 md:px-10 md:py-20"
+        id="team"
+      >
+        {/* Title */}
+        <h1 className="text-center text-4xl md:text-5xl lg:text-6xl font-bold text-slate-800 leading-tight">
+          Správna rada
+        </h1>
+        <p className="mx-auto mb-8 mt-4 text-center text-sm text-gray-500 sm:text-base md:mb-12 lg:mb-16">
+          Spoznajte náš tím
+        </p>
+        {/* Content */}
+        <div className="grid grid-cols-1 justify-items-center gap-5 sm:grid-cols-2 sm:justify-items-stretch md:grid-cols-3 md:gap-4 lg:gap-6">
+          {team.members.map((member) => (
+            <div
+              key={member.name}
+              className="mx-auto flex w-full flex-col items-center gap-4 py-8 text-center md:px-8 md:py-4 lg:px-12"
+            >
+              <img
+                src={member.image}
+                alt={member.name}
+                className="mb-4 inline-block h-40 w-40 rounded-full object-cover transform transition-transform duration-300 hover:scale-125 hover:shadow-lg hover:rotate-12"
+              />
+              <p className="font-bold">{member.name}</p>
+              <p className="text-center text-sm text-gray-500">{member.role}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
