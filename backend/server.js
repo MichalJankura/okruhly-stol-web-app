@@ -58,7 +58,6 @@ app.get('/api/blog-posts', async (req, res) => {
         }
 
         if (month && month !== 'All') {
-            // Get month number from name (1-12)
             const monthNames = [
                 'Január', 'Február', 'Marec', 'Apríl', 'Máj', 'Jún', 
                 'Júl', 'August', 'September', 'Október', 'November', 'December'
@@ -119,8 +118,8 @@ app.get('/api/blog-posts', async (req, res) => {
             posts: eventsResult.rows.map(event => ({
                 id: event.id,
                 title: event.title,
-                author: event.event_type || 'Unknown', // Map event_type to author for frontend compatibility
-                category: event.location || 'Unknown', // Map location to category
+                category: event.event_type || 'Unknown', // Map event_type to category
+                location: event.location || 'Unknown', // Add location
                 date: new Date(event.event_start_date).getFullYear().toString(),
                 month: new Date(event.event_start_date).toLocaleString('sk-SK', { month: 'long' }),
                 short_text: event.description ? event.description.substring(0, 100) + '...' : '',
@@ -159,8 +158,8 @@ app.get('/api/blog-posts/:id', async (req, res) => {
         res.json({
             id: event.id,
             title: event.title,
-            author: event.event_type || 'Unknown',
-            category: event.location || 'Unknown',
+            category: event.event_type || 'Unknown',
+            location: event.location || 'Unknown', // Add location
             date: new Date(event.event_start_date).getFullYear().toString(),
             month: new Date(event.event_start_date).toLocaleString('sk-SK', { month: 'long' }),
             short_text: shortText, // Use the limited text
@@ -234,8 +233,7 @@ app.post('/api/blog-posts', async (req, res) => {
         res.status(201).json({
             id: event.id,
             title: event.title,
-            author: event.event_type || 'Unknown',
-            category: event.location || 'Unknown',
+            category: event.event_type || 'Unknown',
             date: new Date(event.event_start_date).getFullYear().toString(),
             month: new Date(event.event_start_date).toLocaleString('sk-SK', { month: 'long' }),
             short_text: event.description ? event.description.substring(0, 150) + '...' : '',
