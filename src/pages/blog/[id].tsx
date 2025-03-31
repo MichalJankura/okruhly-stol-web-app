@@ -41,7 +41,7 @@ const BlogDetail = () => {
         console.log('Fetching post with ID:', id);
         
         // Použijeme rovnaký endpoint ako v SimpleBlog
-        const response = await fetch('http://localhost:1337/api/blogs?populate=*');
+        const response = await fetch('https://backend-strapi-kdju.onrender.com/api/blogs?populate=*');
         console.log('Response status:', response.status);
         
         if (!response.ok) {
@@ -125,7 +125,7 @@ const BlogDetail = () => {
   const getImageUrl = (post: StrapiPost) => {
     if (post.titulnyobrazok) {
       const imageUrl = post.titulnyobrazok.formats?.medium?.url || post.titulnyobrazok.url;
-      return imageUrl.startsWith('/') ? `http://localhost:1337${imageUrl}` : imageUrl;
+      return imageUrl.startsWith('/') ? `https://backend-strapi-kdju.onrender.com/${imageUrl}` : imageUrl;
     }
     return 'https://via.placeholder.com/800x400?text=Bez+obrázku';
   };
