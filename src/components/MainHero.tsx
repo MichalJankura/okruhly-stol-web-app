@@ -1,226 +1,61 @@
-// import React, { useState, useEffect } from "react";
-// import Login from "./Registration/Login";
-// import Register from "./Registration/Register";
-// // import RainEffect from "./Animations/RainEffect";
-// // import FallingLeaves from "./Animations/FallingLeaves";
-// // import RainEffect from "./Animations/RainEffect";
-// import RotatingText from "./Animations/FlopingText";
-// import { eventEmitter } from '../utils/events';
-
-// const MainHero = () => {
-//   const [showLogin, setShowLogin] = useState(false);
-//   const [showRegister, setShowRegister] = useState(false);
-//   const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-//   useEffect(() => {
-//     const token = localStorage.getItem('token');
-//     setIsLoggedIn(!!token);
-
-//     // Listen for auth changes
-//     const handleAuthChange = () => {
-//       const token = localStorage.getItem('token');
-//       setIsLoggedIn(!!token);
-//     };
-
-//     const unsubscribe = eventEmitter.subscribe('authChange', handleAuthChange);
-
-//     // Cleanup subscription on unmount
-//     return () => unsubscribe();
-//   }, []);
-
-//   const handleRegisterClick = () => {
-//     setShowLogin(false);
-//     setShowRegister(true);
-//   };
-
-//   const handleLoginClick = () => {
-//     setShowRegister(false);
-//     setShowLogin(true);
-//   };
-
-//   const handleCloseLogin = () => {
-//     setShowLogin(false);
-//   };
-
-//   return (
-    
-//     <>
-//       <div
-//         className="bg-gray-900 min-h-screen flex items-start pt-20 relative"
-//         style={{
-//           backgroundImage: "url('../assets/images/background.jpeg')",
-//           backgroundSize: "cover",
-//           backgroundPosition: "center",
-//         }}
-//       >
-// {/*         <RainEffect /> */}
-//         {/* <FallingLeaves /> */}
-//         <div className="container mx-auto px-6 md:px-12">
-//           <div className="flex flex-col md:flex-row items-center">
-//             <div className="md:w-1/2 lg:w-2/3 md:pr-12">
-//                 <h1 className="text-4xl md:text-6xl lg:text-7xl text-white font-bold mb-6">
-//                 <span className="text-[rgb(0,85,161)]"> OKRÚHLY STÔL </span><br className="hidden md:block" />
-//                 <span className="text-red-500">RUSÍNOV </span><br className="hidden md:block" />
-//                 <span className="text-black">SLOVENSKA</span><br className="hidden md:block" />
-//                 </h1>
-//               <div className="py-20 sm:py-4 bg-indigo-500 rounded-lg">
-//                 <div className="mx-auto max-w-7xl px-6 lg:px-8">
-//                   <dl className="grid grid-cols-1 gap-x-8 gap-y-16 text-center lg:grid-cols-3">
-//                     <div className="mx-auto flex max-w-xs flex-col gap-y-4">
-//                       <dd className="order-first text-3xl font-semibold tracking-tight text-white sm:text-5xl h-14 flex items-center justify-center">
-//                         <RotatingText words={["44 million", "45 million", "46 million"]} />
-//                       </dd>
-//                       <dt className="text-base/7 text-white">Transactions every 24 hours</dt>
-//                     </div>
-//                     <div className="mx-auto flex max-w-xs flex-col gap-y-4">
-//                       <dd className="order-first text-3xl font-semibold tracking-tight text-white sm:text-5xl h-14 flex items-center justify-center">
-//                         <RotatingText words={["$119 trillion", "$120 trillion", "$121 trillion"]} />
-//                       </dd>
-//                       <dt className="text-base/7 text-white">Assets under holding</dt>
-//                     </div>
-//                     <div className="mx-auto flex max-w-xs flex-col gap-y-4">
-//                       <dd className="order-first text-3xl font-semibold tracking-tight text-white sm:text-5xl h-14 flex items-center justify-center">
-//                         <RotatingText words={["46,000", "47,000", "48,000"]} />
-//                       </dd>
-//                       <dt className="text-base/7 text-white">Počet členov</dt>
-//                     </div>
-//                   </dl>
-//                 </div>
-//               </div>
-
-//               {!isLoggedIn && (
-//                 <div className="flex gap-5 sm:py-20 lg:py-20">
-//                   <button
-//                     onClick={() => setShowLogin(true)}
-//                     className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-6 rounded-md"
-//                   >
-//                     Prihlásiť sa
-//                   </button>
-//                 </div>
-//               )}
-//             </div>
-//             <div className="md:w-1/2 lg:w-1/3 mt-8 md:mt-0 md:pl-12">
-//               <img
-//                 src="../assets/images/osrs.png"
-//                 alt="Hero Image"  
-//               />
-//             </div>
-//           </div>
-//         </div>
-//       </div>
-
-//       {showLogin && (
-//         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-//           <div className="relative">
-//             <button
-//               onClick={() => setShowLogin(false)}
-//               className="absolute -top-4 -right-4 bg-white rounded-full p-2 text-gray-600 hover:text-gray-800 shadow-lg"
-//             >
-//               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-//               </svg>
-//             </button>
-//             <Login onRegisterClick={handleRegisterClick} onClose={handleCloseLogin} />
-//           </div>
-//         </div>
-//       )}
-
-//       {showRegister && (
-//         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-//           <div className="relative">
-//             <button
-//               onClick={() => setShowRegister(false)}
-//               className="absolute -top-4 -right-4 bg-white rounded-full p-2 text-gray-600 hover:text-gray-800 shadow-lg"
-//             >
-//               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-//                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-//               </svg>
-//             </button>
-//             <Register onLoginClick={handleLoginClick} />
-//           </div>
-//         </div>
-//       )}
-//     </>
-//   );
-// };
-
-// export default MainHero;
 import React, { useState } from "react";
-// import Login from "./Registration/Login";
-// import RainEffect from "./Animations/RainEffect";
-// import FallingLeaves from "./Animations/FallingLeaves";
-// import RainEffect from "./Animations/RainEffect";
-import RotatingText from "./Animations/FlopingText";
+import { FaUsers, FaCalendarAlt, FaClock } from "react-icons/fa";
+import Login from "./Registration/Login";
 
 const MainHero = () => {
   const [showLogin, setShowLogin] = useState(false);
+  const stats = [
+    { id: 1, number: "1000+", label: "Total Members", icon: <FaUsers /> },
+    { id: 2, number: "15", label: "Years Active", icon: <FaClock /> },
+    { id: 3, number: "500+", label: "Events Hosted", icon: <FaCalendarAlt /> }
+  ];
 
   return (
-    
-    <>
-      <div
-        className="bg-gray-900 min-h-screen flex items-start pt-20 relative"
-        style={{
-          backgroundImage: "url('../assets/images/background.jpeg')",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}
-      >
-        {/* <RainEffect /> */}
-        {/* <FallingLeaves /> */} 
-        <div className="container mx-auto px-6 md:px-12">
-          <div className="flex flex-col md:flex-row items-center">
-            <div className="md:w-1/2 lg:w-2/3 md:pr-12">
-                <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6">
-                <span className="text-[rgb(0,85,161)] bg-white"> OKRÚHLY STÔL </span><br className="hidden md:block" />
-                <span className="text-red-500 bg-white ">RUSÍNOV </span><br className="hidden md:block" />
-                <span className="text-black bg-white">SLOVENSKA</span><br className="hidden md:block" />
-                </h1>
-              <div className="py-20 sm:py-4 bg-indigo-500 rounded-lg">
-                <div className="mx-auto max-w-7xl px-6 lg:px-8">
-                  <dl className="grid grid-cols-1 gap-x-8 gap-y-16 text-center lg:grid-cols-3">
-                    <div className="mx-auto flex max-w-xs flex-col gap-y-4">
-                      <dd className="order-first text-3xl font-semibold tracking-tight text-white sm:text-5xl h-14 flex items-center justify-center">
-                        <RotatingText words={["44 million", "45 million", "46 million"]} />
-                      </dd>
-                      <dt className="text-base/7 text-white">Transactions every 24 hours</dt>
-                    </div>
-                    <div className="mx-auto flex max-w-xs flex-col gap-y-4">
-                      <dd className="order-first text-3xl font-semibold tracking-tight text-white sm:text-5xl h-14 flex items-center justify-center">
-                        <RotatingText words={["$119 trillion", "$120 trillion", "$121 trillion"]} />
-                      </dd>
-                      <dt className="text-base/7 text-white">Assets under holding</dt>
-                    </div>
-                    <div className="mx-auto flex max-w-xs flex-col gap-y-4">
-                      <dd className="order-first text-3xl font-semibold tracking-tight text-white sm:text-5xl h-14 flex items-center justify-center">
-                        <RotatingText words={["46,000", "47,000", "48,000"]} />
-                      </dd>
-                      <dt className="text-base/7 text-white">Počet členov</dt>
-                    </div>
-                  </dl>
-                </div>
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <div className="container mx-auto px-4 py-12 md:py-20">
+        <div className="flex flex-col lg:flex-row items-center gap-12">
+          {/* Left Column */}
+          <div className="flex-1 space-y-8">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-slate-800 leading-tight">
+              OKRÚHLY STÔL RUSÍNOV <br /> SLOVENSKA
+            </h1>
 
-              <div className="flex gap-5 sm:py-20 lg:py-20">
-                <button
-                  onClick={() => setShowLogin(true)}
-                  className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-6 rounded-md"
-                >
-                  Prihlásiť sa
-                </button>
-                <a
-                  href="#"
-                  className="bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 px-6 rounded-md"
-                >
-                  Registrovať sa
-                </a>
-              </div>
-            </div>
-            <div className="md:w-1/2 lg:w-1/3 mt-8 md:mt-0 md:pl-12 rounded-lg">
+            <div className="relative w-48 h-48 mx-auto lg:mx-0">
               <img
-                src="../assets/images/osrs.png"
-                alt="Hero Image"  
+                src="../assets/images/osrs_clean.png"
+                alt="Company Logo"
+                className="rounded-full w-full h-full object-cover transform transition-transform hover:scale-105"
               />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {stats.map((stat) => (
+                <div key={stat.id} className="bg-white p-6 rounded-xl shadow-md hover:shadow-lg transition-shadow">
+                  <div className="flex items-center justify-center text-indigo-600 mb-3 text-2xl">
+                    {stat.icon}
+                  </div>
+                  <div className="text-3xl font-bold text-slate-800 text-center mb-1">{stat.number}</div>
+                  <div className="text-sm text-slate-500 text-center">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4">
+              <button 
+                onClick={() => setShowLogin(true)}
+                className="px-8 py-3 bg-indigo-600 text-white rounded-lg shadow-lg hover:bg-indigo-700 transition-colors font-semibold"
+              >
+                Login
+              </button>
+              <button className="px-8 py-3 bg-emerald-600 text-white rounded-lg shadow-lg hover:bg-emerald-700 transition-colors font-semibold">
+                View Events
+              </button>
+            </div>
+          </div>
+
+          {/* Right Column with Parallelogram */}
+          <div className="flex-1 relative h-[700px] w-full overflow-hidden ml-auto">
+            <div className="absolute top-0 right-0 bottom-0 left-0 transform skew-x-[-12deg] translate-x-20 overflow-hidden">
             </div>
           </div>
         </div>
@@ -231,19 +66,18 @@ const MainHero = () => {
           <div className="relative">
             <button
               onClick={() => setShowLogin(false)}
-              className="absolute -top-4 -right-4 bg-white rounded-full p-2 text-gray-600 hover:text-gray-800 shadow-lg"
+              className="absolute -top-4 -right-4 bg-white rounded-full p-2 text-gray-600 hover:text-gray-800 shadow-lg z-50"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-{/*             <Login /> */}
+            <Login />
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 };
 
 export default MainHero;
-
