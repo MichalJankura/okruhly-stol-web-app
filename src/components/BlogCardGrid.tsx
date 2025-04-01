@@ -1,437 +1,440 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from "react";
+import { FaHeart, FaRegHeart, FaCheck, FaTimes, FaMapMarkerAlt, FaClock, FaSearch, FaFilter, FaChevronLeft, FaChevronRight } from "react-icons/fa";
+import { format } from "date-fns";
 
-interface BlogCardProps {
+interface BlogArticle {
+  id: number;
   title: string;
-  author: string;
   category: string;
   date: string;
+  month: string;
   shortText: string;
   fullText: string;
   image: string;
+  event_start_date?: string;
+  event_end_date?: string;
+  start_time?: string;
+  end_time?: string;
+  tickets?: string;
+  link_to?: string;
+  price?: number;
+  location?: string;
 }
 
-const BlogCard = ({
-  title,
-  author,
-  category,
-  date,
-  shortText,
-  fullText,
-  image,
-}: BlogCardProps) => {
-  const [isOpen, setIsOpen] = useState(false);
+const BlogCardGrid = () => {
+  const [favorites, setFavorites] = useState<number[]>([]);
+  const [category, setCategory] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [blogArticles, setBlogArticles] = useState<BlogArticle[]>([]);
+  const [allArticles, setAllArticles] = useState<BlogArticle[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState("all");
+  const [dateRange, setDateRange] = useState({
+    from: "",
+    to: ""
+  });
+  const [categories, setCategories] = useState<string[]>([]);
+  const [locations, setLocations] = useState<string[]>(["all"]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const eventsPerPage = 8;
+
+  const toggleFavorite = useCallback((eventId: number) => {
+    setFavorites(prev => 
+      prev.includes(eventId) 
+        ? prev.filter(id => id !== eventId)
+        : [...prev, eventId]
+    );
+  }, []);
+
+  const handleRecommendation = useCallback((eventId: number, isInterested: boolean) => {
+    console.log(`User ${isInterested ? "interested in" : "not interested in"} event ${eventId}`);
+  }, []);
+
+  // Fetch articles on component mount
+  useEffect(() => {
+    const fetchArticles = async () => {
+      try {
+        const response = await fetch(`https://okruhly-stol-web-app-s9d9.onrender.com/api/blog-posts?limit=1000`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch articles');
+        }
+        const data = await response.json();
+        
+        const postsData = data.posts || data.articles || [];
+        
+        const formattedArticles = postsData.map((post: any) => ({
+          id: post.id,
+          title: post.title,
+          category: post.category || 'Unknown',
+          date: post.date,
+          month: post.month,
+          shortText: post.short_text || post.shortText || '',
+          fullText: post.full_text || post.fullText || '',
+          image: post.image || 'https://images.unsplash.com/photo-1540575861501-7cf05a4b125a?ixlib=rb-4.0.3&auto=format&fit=crop&w=320&q=80',
+          event_start_date: post.event_start_date,
+          event_end_date: post.event_end_date,
+          start_time: post.start_time,
+          end_time: post.end_time,
+          tickets: post.tickets,
+          link_to: post.link_to,
+          price: post.price || 0,
+          location: post.location || 'Miesto Neznáme'
+        }));
+
+        // Debug table for events
+        console.table(formattedArticles.map((event: BlogArticle) => ({
+          ID: event.id,
+          Title: event.title,
+          Category: event.category,
+          Date: event.date,
+          Event_Start: event.event_start_date,
+          Location: event.location
+        })));
+
+        // Extract unique locations from the formatted articles
+        const uniqueLocations = Array.from(new Set<string>(formattedArticles
+          .map((article: BlogArticle) => article.location)
+          .filter((loc: string | null | undefined): loc is string => 
+            typeof loc === 'string' && loc !== 'null' && loc !== 'undefined')));
+
+        setLocations(["all", ...uniqueLocations]);
+        setAllArticles(formattedArticles);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching articles:', err);
+        setError('Failed to load articles');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchArticles();
+  }, []);
+
+  // Fetch categories on component mount
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('https://okruhly-stol-web-app-s9d9.onrender.com/api/categories');
+        if (!response.ok) {
+          throw new Error('Failed to fetch categories');
+        }
+        const data = await response.json();
+        const categoryNames = data.map((cat: any) => cat.name);
+        setCategories(categoryNames);
+      } catch (err) {
+        console.error('Error fetching categories:', err);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
+  // Update displayed articles when filters change
+  useEffect(() => {
+    const filtered = allArticles.filter(event => {
+      const matchesCategory = !category || event.category.toLowerCase() === category.toLowerCase();
+      const matchesLocation = selectedLocation === "all" || event.location === selectedLocation;
+      const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                         event.shortText.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      let matchesDateRange = true;
+      if (dateRange.from && dateRange.to) {
+        const eventDate = new Date(event.event_start_date || event.date);
+        const fromDate = new Date(dateRange.from);
+        const toDate = new Date(dateRange.to);
+        matchesDateRange = eventDate >= fromDate && eventDate <= toDate;
+      }
+
+      return matchesCategory && matchesLocation && matchesSearch && matchesDateRange;
+    });
+
+    const startIndex = (currentPage - 1) * eventsPerPage;
+    const endIndex = startIndex + eventsPerPage;
+    setBlogArticles(filtered.slice(startIndex, endIndex));
+  }, [category, allArticles, selectedLocation, searchQuery, dateRange, currentPage]);
+
+  const filteredEvents = useMemo(() => {
+    return blogArticles;
+  }, [blogArticles]);
+
+  // Handle page change
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background p-6 flex items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background p-6 flex items-center justify-center text-red-500">
+        {error}
+      </div>
+    );
+  }
 
   return (
-    <div className="h-full flex flex-col border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 bg-white">
-      <a
-        className="group cursor-pointer flex flex-col h-full"
-        onClick={() => setIsOpen(true)}
-      >
-        <div className="relative w-full h-48 overflow-hidden">
-          <img
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-in-out"
-            src={image}
-            alt={title}
-          />
-        </div>
-        <div className="p-4 flex flex-col flex-grow">
-          <h3 className="text-xl font-semibold text-gray-800 group-hover:text-gray-600 line-clamp-2 mb-2">
-            {title}
-          </h3>
-          <p className="text-sm text-gray-500 mb-2">
-            {author} - {category} - {date}
-          </p>
-          <p className="mt-1 text-gray-600 line-clamp-3 flex-grow">
-            {shortText}
-          </p>
-          <div className="mt-4 text-blue-600 text-sm font-medium">
-            Čítať viac
-          </div>
-        </div>
-      </a>
-      {isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
-          <div className="bg-white p-6 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <h3 className="text-2xl font-bold mb-2">{title}</h3>
-            <p className="text-sm text-gray-500 mb-4">
-              {author} - {category} - {date}
-            </p>
-            <img
-              className="w-full h-64 object-cover rounded mb-4"
-              src={image}
-              alt={title}
-            />
-            <div className="text-gray-700 prose max-w-none">{fullText}</div>
-            <button
-              className="mt-6 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition-colors"
-              onClick={() => setIsOpen(false)}
+    <div className="w-full bg-[#E5E7EB] pb-8">
+      <div className="container mx-auto px-2 sm:px-4 md:px-6">
+        <section className="mb-8 sm:mb-12">
+          <h2 className="text-[28px] sm:text-[36px] font-bold mb-4 sm:mb-6">Recommended Events</h2>
+          <div className="relative">
+            <button 
+              onClick={() => document.querySelector('.scroll-container')?.scrollBy({ left: -412, behavior: 'smooth' })}
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-white/80 rounded-full shadow-sm hover:bg-white transition-colors block"
             >
-              Zavrieť
+              <FaChevronLeft className="text-[#6D7074]" />
+            </button>
+            <div className="w-[400px] sm:w-full mx-auto sm:mx-0">
+              <div className="flex flex-row overflow-x-auto hide-scrollbar sm:gap-3 gap-3  pb-4 w-full scroll-container">
+                {allArticles.slice(0, 10).map((event) => (
+                  <div 
+                    key={event.id}
+                    className="w-[400px] sm:w-[320px] flex-none max-w-[400px] mx-auto sm:mx-0 bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition-shadow flex flex-col"
+                  >
+                    <div className="relative h-48">
+                      <img
+                        src={event.image}
+                        alt={event.title}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                      <button
+                        onClick={() => toggleFavorite(event.id)}
+                        className="absolute top-4 right-4 p-2 rounded-full bg-white/80 hover:bg-white transition-colors"
+                      >
+                        {favorites.includes(event.id) ? (
+                          <FaHeart className="text-[#FF4C4C]" />
+                        ) : (
+                          <FaRegHeart className="text-[#6D7074]" />
+                        )}
+                      </button>
+                    </div>
+                    <div className="p-4 flex flex-col h-[280px]">
+                      <h3 className="text-[14px] font-semibold text-[#020817] mb-2">{event.title}</h3>
+                      <div className="flex items-center gap-2 text-[#6D7074] mb-2">
+                        <FaClock />
+                        <span>{format(new Date(event.event_start_date || event.date), "MMM d, yyyy")}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[#6D7074] mb-2">
+                        <FaMapMarkerAlt />
+                        <span>{event.location}</span>
+                      </div>
+                      <p className="text-[#020817] text-sm mb-4 line-clamp-2">{event.shortText}</p>
+                      <div className="flex justify-between items-center mt-auto">
+                        <div className="flex gap-1 sm:gap-2">
+                          <button
+                            onClick={() => handleRecommendation(event.id, true)}
+                            className="p-1.5 sm:p-2 bg-[#4CAF50] text-white rounded-full hover:opacity-90 transition-opacity"
+                          >
+                            <FaCheck className="text-sm sm:text-base" />
+                          </button>
+                          <button
+                            onClick={() => handleRecommendation(event.id, false)}
+                            className="p-1.5 sm:p-2 bg-[#FF4C4C] text-white rounded-full hover:opacity-90 transition-opacity"
+                          >
+                            <FaTimes className="text-sm sm:text-base" />
+                          </button>
+                        </div>
+                        <button className="px-4 py-2 bg-[#0D6EFD] text-white rounded-lg hover:opacity-90 transition-opacity">
+                          View Details
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <button 
+              onClick={() => document.querySelector('.scroll-container')?.scrollBy({ left: 412, behavior: 'smooth' })}
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-white/80 rounded-full shadow-sm hover:bg-white transition-colors block"
+            >
+              <FaChevronRight className="text-[#6D7074]" />
             </button>
           </div>
-        </div>
-      )}
-    </div>
-  );
-};
+        </section>
 
-const BlogCardGrid = () => {
-  const [selectedYear, setSelectedYear] = useState('All');
-  const [selectedMonth, setSelectedMonth] = useState('All');
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [selectedAuthor, setSelectedAuthor] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [postsPerPage, setPostsPerPage] = useState(4);
-  const [currentPage, setCurrentPage] = useState(1);
-
-  const blogPosts = [
-    {
-      title: 'Studio by Preline',
-      author: 'John Doe',
-      category: 'Tech',
-      date: '2023',
-      month: 'Január',
-      shortText: 'Short text about Studio by Preline...',
-      fullText: 'Full article about Studio by Preline...',
-      image:
-        'https://images.unsplash.com/photo-1540575861501-7cf05a4b125a?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=320&q=80',
-    },
-    {
-      title: 'Onsite',
-      author: 'Jane Smith',
-      category: 'Event',
-      date: '2022',
-      month: 'Február',
-      shortText: 'Short text about Onsite...',
-      fullText: 'Full article about Onsite...',
-      image:
-        'https://images.unsplash.com/photo-1668906093328-99601a1aa584?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=320&q=80',
-    },
-    {
-      title: 'The complete guide to OKRs',
-      author: 'Alice Brown',
-      category: 'Business',
-      date: '2023',
-      month: 'Marec',
-      shortText: 'Short text about OKRs...',
-      fullText: 'Full article about OKRs...',
-      image:
-        'https://images.unsplash.com/photo-1567016526105-22da7c13161a?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=320&q=80',
-    },
-    {
-      title: 'People program models',
-      author: 'Bob Johnson',
-      category: 'HR',
-      date: '2021',
-      month: 'Apríl',
-      shortText: 'Short text about People program models...',
-      fullText: 'Full article about People program models...',
-      image:
-        'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=320&q=80',
-    },
-    {
-      title: 'People program models',
-      author: 'Bob Johnson',
-      category: 'HR',
-      date: '2021',
-      month: 'Apríl',
-      shortText: 'Short text about People program models...',
-      fullText: 'Full article about People program models...',
-      image:
-        'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=320&q=80',
-    },
-    {
-      title: 'People program models',
-      author: 'Bob Johnson',
-      category: 'HR',
-      date: '2021',
-      month: 'Apríl',
-      shortText: 'Short text about People program models...',
-      fullText: 'Full article about People program models...',
-      image:
-        'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=320&q=80',
-    },
-    {
-      title: 'People program models',
-      author: 'Bob Johnson',
-      category: 'HR',
-      date: '2021',
-      month: 'Apríl',
-      shortText: 'Short text about People program models...',
-      fullText: 'Full article about People program models...',
-      image:
-        'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=320&q=80',
-    },
-    {
-      title: 'People program models',
-      author: 'Bob Johnson',
-      category: 'HR',
-      date: '2021',
-      month: 'Apríl',
-      shortText: 'Short text about People program models...',
-      fullText: 'Full article about People program models...',
-      image:
-        'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=320&q=80',
-    },
-    {
-      title: 'People program models',
-      author: 'Bob Johnson',
-      category: 'HR',
-      date: '2021',
-      month: 'Apríl',
-      shortText: 'Short text about People program models...',
-      fullText: 'Full article about People program models...',
-      image:
-        'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=320&q=80',
-    },
-  ];
-
-  const filteredPosts = blogPosts.filter(
-    (post) =>
-      (selectedYear === 'All' || post.date === selectedYear) &&
-      (selectedMonth === 'All' || post.month === selectedMonth) &&
-      (selectedCategory === 'All' || post.category === selectedCategory) &&
-      (selectedAuthor === 'All' || post.author === selectedAuthor) &&
-      (searchQuery === '' ||
-        post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        post.shortText.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        post.author.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-
-  const totalPages = Math.ceil(filteredPosts.length / postsPerPage);
-  const displayedPosts = filteredPosts.slice(
-    (currentPage - 1) * postsPerPage,
-    currentPage * postsPerPage
-  );
-
-  // Add a function to scroll to the top of the BlogCardGrid section
-  const scrollToTop = () => {
-    document.getElementById('news')?.scrollIntoView({
-      behavior: 'smooth'
-    });
-  };
-
-  // Reset to first page when changing posts per page
-  const handlePostsPerPageChange = (newValue: number) => {
-    setPostsPerPage(newValue);
-    setCurrentPage(1);
-    scrollToTop();
-  };
-
-  return (
-    <div
-      id="news"
-      className="min-h-screen relative bg-cover bg-center bg-no-repeat py-10 lg:py-0"
-      style={{
-        backgroundImage: 'url("assets/images/events.jpeg")'
-      }}
-    >
-      {/* Dark overlay for better text readability */}
-      <div className="absolute inset-0 bg-black bg-opacity-30"></div>
-      
-      <div className="max-w-[85rem] px-4 sm:px-6 lg:px-8 mx-auto flex flex-col relative z-10">
-        <h2 className="text-4xl font-extrabold text-center tracking-wide text-white sm:text-6xl md:text-6x1 mb-10">
-          Novinky a udalosti
-        </h2>
-        <div className="flex flex-col md:flex-row gap-6 flex-grow py-10">
-          <div className="w-full md:w-1/5 pl-0 bg-white bg-opacity-90 p-5 rounded-lg h-fit max-h-[calc(100vh-340px)] overflow-y-auto sticky top-24">
-            <h3 className="text-center font-bold px-16 text-2xl">Filter</h3>
-            <p className="mt-4 mb-1 text-sm font-medium text-gray-700 px-2">
-              Vyhľadávanie
-            </p>
-            <div className="relative px-2">
-              <input
-                type="text"
-                className="w-full p-2 border rounded pl-9"
-                placeholder="Hľadať..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1); // Reset to first page on search
-                }}
-              />
-              <svg
-                className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
-            </div>
-            <p className="mt-4 mb-1 text-sm font-medium text-gray-700 px-2">Rok</p>
-            <div className="px-2">
-              <select
-                className="w-full p-2 border rounded"
-                onChange={(e) => {
-                  setSelectedYear(e.target.value);
-                  setCurrentPage(1);
-                }}
-              >
-                <option>All</option>
-                <option>2023</option>
-                <option>2022</option>
-                <option>2021</option>
-              </select>
-            </div>
-            <p className="mt-4 mb-1 text-sm font-medium text-gray-700 px-2">Mesiac</p>
-            <div className="px-2">
-              <select
-                className="w-full p-2 border rounded"
-                onChange={(e) => {
-                  setSelectedMonth(e.target.value);
-                  setCurrentPage(1);
-                }}
-              >
-                <option>All</option>
-                <option>Január</option>
-                <option>Február</option>
-                <option>Marec</option>
-                <option>Apríl</option>
-                <option>Máj</option>
-                <option>Jún</option>
-                <option>Júl</option>
-                <option>August</option>
-                <option>September</option>
-                <option>Október</option>
-                <option>November</option>
-                <option>December</option>
-              </select>
-            </div>
-            <p className="mt-4 mb-1 text-sm font-medium text-gray-700 px-2">
-              Kategória
-            </p>
-            <div className="px-2">
-              <select
-                className="w-full p-2 border rounded"
-                onChange={(e) => {
-                  setSelectedCategory(e.target.value);
-                  setCurrentPage(1);
-                }}
-              >
-                <option>All</option>
-                <option>Tech</option>
-                <option>Event</option>
-                <option>Business</option>
-                <option>HR</option>
-              </select>
-            </div>
-            <p className="mt-4 mb-1 text-sm font-medium text-gray-700 px-2">Autor</p>
-            <div className="px-2">
-              <select
-                className="w-full p-2 border rounded"
-                onChange={(e) => setSelectedAuthor(e.target.value)}
-              >
-                <option>All</option>
-                <option>John Doe</option>
-                <option>Jane Smith</option>
-                <option>Alice Brown</option>
-                <option>Bob Johnson</option>
-              </select>
-            </div>
-
-            <p className="mt-4 mb-1 text-sm font-medium text-gray-700 px-2">
-              Počet na stránke
-            </p>
-            <div className="px-2">
-              <select
-                className="w-full p-2 border rounded"
-                value={postsPerPage}
-                onChange={(e) =>
-                  handlePostsPerPageChange(parseInt(e.target.value, 10))
-                }
-              >
-                <option value={4}>4</option>
-                <option value={8}>8</option>
-                <option value={12}>12</option>
-                <option value={16}>16</option>
-              </select>
-            </div>
+        <div className="mb-8 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
+          <div className="flex-1 relative">
+            <input
+              type="text"
+              placeholder="Search events..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-4 py-2 pl-10 rounded-lg bg-[#F0F1F3] text-[#020817] border border-[#E0E0E0]"
+            />
+            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#6D7074]" />
           </div>
+          
+          <div className="relative">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="w-full sm:w-auto px-4 py-2 bg-[#0D6EFD] text-white rounded-lg flex items-center justify-center gap-2"
+            >
+              <FaFilter />
+              Filters
+            </button>
 
-          <div className="w-full md:w-4/5 flex flex-col">
-            <div className="grid md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 lg:gap-8 min-h-[500px]">
-              {displayedPosts.length > 0 ? (
-                displayedPosts.map((post, index) => (
-                  <BlogCard key={index} {...post} />
-                ))
-              ) : (
-                <div className="col-span-full flex justify-center items-center py-20 bg-white bg-opacity-90 rounded-lg text-gray-500">
-                  Nenašiel sa žiadny príspevok s týmito kritériami
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-wrap items-center justify-center gap-2 mt-8 mb-10">
-              {totalPages > 1 && (
-                <>
-                  <button
-                    className={`px-3 py-1 border rounded bg-white ${
-                      currentPage === 1
-                        ? 'cursor-not-allowed'
-                        : 'hover:bg-blue-200'
-                    }`}
-                    onClick={() => {
-                      if (currentPage > 1) {
-                        setCurrentPage(currentPage - 1);
-                        scrollToTop();
-                      }
-                    }}
-                    disabled={currentPage === 1}
-                  >
-                    &laquo; Predchádzajúca
-                  </button>
-
-                  {Array.from({ length: totalPages }, (_, i) => (
+            {showFilters && (
+              <div className="fixed sm:absolute inset-0 sm:inset-auto sm:top-full sm:left-1/2 sm:-translate-x-1/2 top-0 right-0 w-full sm:w-80 bg-white rounded-lg shadow-sm p-4 z-50 sm:z-10 border border-[#E0E0E0] mt-2">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center sm:hidden">
+                    <h3 className="text-lg font-semibold">Filters</h3>
                     <button
-                      key={i}
-                      className={`px-3 py-1 border rounded min-w-[36px] bg-white ${
-                        currentPage === i + 1
-                          ? 'bg-blue-600 text-white'
-                          : 'hover:bg-blue-200'
-                      }`}
-                      onClick={() => {
-                        setCurrentPage(i + 1);
-                        scrollToTop();
-                      }}
+                      onClick={() => setShowFilters(false)}
+                      className="p-2 hover:bg-gray-100 rounded-full"
                     >
-                      {i + 1}
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
                     </button>
-                  ))}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Category</label>
+                    <select
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-[#F0F1F3] text-[#020817] border border-[#E0E0E0]"
+                    >
+                      <option value="">Select a category</option>
+                      {categories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                  <button
-                    className={`px-3 py-1 border rounded bg-white ${
-                      currentPage === totalPages
-                        ? 'opacity-50 cursor-not-allowed'
-                        : 'hover:bg-blue-200'
-                    }`}
-                    onClick={() => {
-                      if (currentPage < totalPages) {
-                        setCurrentPage(currentPage + 1);
-                        scrollToTop();
-                      }
-                    }}
-                    disabled={currentPage === totalPages}
-                  >
-                    Nasledujúca &raquo;
-                  </button>
-                </>
-              )}
-            </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Location</label>
+                    <select
+                      value={selectedLocation}
+                      onChange={(e) => setSelectedLocation(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-[#F0F1F3] text-[#020817] border border-[#E0E0E0]"
+                    >
+                      {locations.map((loc) => (
+                        <option key={loc} value={loc}>
+                          {loc === 'all' ? 'All Locations' : loc}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-            <p className="text-center text-sm text-white">
-              Zobrazené {(currentPage - 1) * postsPerPage + 1} až{' '}
-              {Math.min(currentPage * postsPerPage, filteredPosts.length)} z{' '}
-              {filteredPosts.length} príspevkov
-            </p>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Date Range</label>
+                    <div className="flex flex-col gap-2">
+                      <input
+                        type="date"
+                        value={dateRange.from}
+                        onChange={(e) => setDateRange(prev => ({ ...prev, from: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg bg-[#F0F1F3] text-[#020817] border border-[#E0E0E0]"
+                      />
+                      <input
+                        type="date"
+                        value={dateRange.to}
+                        onChange={(e) => setDateRange(prev => ({ ...prev, to: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg bg-[#F0F1F3] text-[#020817] border border-[#E0E0E0]"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
+
+        <section>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+            <h2 className="text-[36px] font-bold">All Events</h2>
+          </div>
+
+          <div className="w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+              {filteredEvents.slice(0, 8).map((event) => (
+                <div 
+                  key={event.id}
+                  className="w-full max-w-[400px] mx-auto sm:max-w-none bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition-shadow flex flex-col"
+                >
+                  <div className="relative h-48">
+                    <img
+                      src={event.image}
+                      alt={event.title}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                    <button
+                      onClick={() => toggleFavorite(event.id)}
+                      className="absolute top-4 right-4 p-2 rounded-full bg-white/80 hover:bg-white transition-colors"
+                    >
+                      {favorites.includes(event.id) ? (
+                        <FaHeart className="text-[#FF4C4C]" />
+                      ) : (
+                        <FaRegHeart className="text-[#6D7074]" />
+                      )}
+                    </button>
+                  </div>
+                  <div className="p-4 flex flex-col h-[280px]">
+                    <h3 className="text-[14px] font-semibold text-[#020817] mb-2">{event.title}</h3>
+                    <div className="flex items-center gap-2 text-[#6D7074] mb-2">
+                      <FaClock />
+                      <span>{format(new Date(event.event_start_date || event.date), "MMM d, yyyy")}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[#6D7074] mb-2">
+                      <FaMapMarkerAlt />
+                      <span>{event.location}</span>
+                    </div>
+                    <p className="text-[#020817] text-sm mb-4 line-clamp-2">{event.shortText}</p>
+                    <div className="flex justify-end items-center mt-auto">
+                      <button className="px-4 py-2 bg-[#0D6EFD] text-white rounded-lg hover:opacity-90 transition-opacity">
+                        View Details
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Pagination Controls */}
+          {filteredEvents.length === eventsPerPage && (
+            <div className="flex justify-center gap-2 mt-8">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-4 py-2 bg-[#0D6EFD] text-white rounded-lg disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <span className="px-4 py-2">
+                Page {currentPage}
+              </span>
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                className="px-4 py-2 bg-[#0D6EFD] text-white rounded-lg"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </section>
+
+        <style jsx>{`
+          .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+          }
+          .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
+        `}</style>
       </div>
     </div>
   );
