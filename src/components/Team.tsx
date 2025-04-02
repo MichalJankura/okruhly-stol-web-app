@@ -14,7 +14,7 @@ const Team = () => {
       >
         {/* Title */}
         <h1 className="text-center text-4xl md:text-5xl lg:text-6xl font-bold text-slate-800 leading-tight">
-          Správna rada
+          Predsedníctvo
         </h1>
         <p className="mx-auto mb-8 mt-4 text-center text-sm text-gray-500 sm:text-base md:mb-12 lg:mb-16">
           Spoznajte náš tím
