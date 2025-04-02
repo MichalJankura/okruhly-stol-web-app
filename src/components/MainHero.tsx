@@ -1,23 +1,54 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FaUsers, FaCalendarAlt, FaClock } from "react-icons/fa";
 import Login from "./Registration/Login";
+import Register from "./Registration/Register";
+import { eventEmitter } from '../utils/events';
 
 const MainHero = () => {
   const [showLogin, setShowLogin] = useState(false);
-  const stats = [
-    { id: 1, number: "1000+", label: "Total Members", icon: <FaUsers /> },
-    { id: 2, number: "15", label: "Years Active", icon: <FaClock /> },
-    { id: 3, number: "500+", label: "Events Hosted", icon: <FaCalendarAlt /> }
-  ];
+  const [showRegister, setShowRegister] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    // Check for token on component mount
+    const checkAuth = () => {
+      const token = localStorage.getItem('token');
+      setIsLoggedIn(!!token);
+    };
+
+    // Initial check
+    checkAuth();
+
+    // Listen for auth changes
+    const handleAuthChange = () => {
+      checkAuth();
+    };
+
+    const unsubscribe = eventEmitter.subscribe('authChange', handleAuthChange);
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
 
   const handleRegisterClick = () => {
-    // TODO: Implement registration logic
-    console.log("Register clicked");
+    setShowLogin(false);
+    setShowRegister(true);
+  };
+
+  const handleLoginClick = () => {
+    setShowRegister(false);
+    setShowLogin(true);
   };
 
   const handleClose = () => {
     setShowLogin(false);
   };
+
+  const stats = [
+    { id: 1, number: "1000+", label: "Total Members", icon: <FaUsers /> },
+    { id: 2, number: "15", label: "Years Active", icon: <FaClock /> },
+    { id: 3, number: "500+", label: "Events Hosted", icon: <FaCalendarAlt /> }
+  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -50,12 +81,14 @@ const MainHero = () => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <button 
-                onClick={() => setShowLogin(true)}
-                className="px-8 py-3 bg-indigo-600 text-white rounded-lg shadow-lg hover:bg-indigo-700 transition-colors font-semibold"
-              >
-                Login
-              </button>
+              {!isLoggedIn && (
+                <button 
+                  onClick={() => setShowLogin(true)}
+                  className="px-8 py-3 bg-indigo-600 text-white rounded-lg shadow-lg hover:bg-indigo-700 transition-colors font-semibold"
+                >
+                  Login
+                </button>
+              )}
               <button className="px-8 py-3 bg-emerald-600 text-white rounded-lg shadow-lg hover:bg-emerald-700 transition-colors font-semibold">
                 View Events
               </button>
@@ -82,6 +115,22 @@ const MainHero = () => {
               </svg>
             </button>
             <Login onRegisterClick={handleRegisterClick} onClose={handleClose} />
+          </div>
+        </div>
+      )}
+
+      {showRegister && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="relative">
+            <button
+              onClick={() => setShowRegister(false)}
+              className="absolute -top-4 -right-4 bg-white rounded-full p-2 text-gray-600 hover:text-gray-800 shadow-lg z-50"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <Register onLoginClick={handleLoginClick} />
           </div>
         </div>
       )}
