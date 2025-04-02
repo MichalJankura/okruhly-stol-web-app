@@ -182,23 +182,23 @@ const BlogCardGrid = () => {
   }
 
   return (
-    <div className="w-full bg-[#E5E7EB] pb-8" id="news">
+    <div className="w-full bg-[#E5E7EB] pb-8">
       <div className="container mx-auto px-2 sm:px-4 md:px-6">
         <section className="mb-8 sm:mb-12">
           <h2 className="text-[28px] sm:text-[36px] font-bold mb-4 sm:mb-6">Recommended Events</h2>
           <div className="relative">
             <button 
-              onClick={() => document.querySelector('.scroll-container')?.scrollBy({ left: -412, behavior: 'smooth' })}
+              onClick={() => document.querySelector('.scroll-container')?.scrollBy({ left: -372, behavior: 'smooth' })}
               className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-white/80 rounded-full shadow-sm hover:bg-white transition-colors block"
             >
               <FaChevronLeft className="text-[#6D7074]" />
             </button>
-            <div className="w-[400px] sm:w-full mx-auto sm:mx-0">
+            <div className="w-[360px] sm:w-full mx-auto sm:mx-0">
               <div className="flex flex-row overflow-x-auto hide-scrollbar sm:gap-3 gap-3  pb-4 w-full scroll-container">
                 {allArticles.slice(0, 10).map((event) => (
                   <div 
                     key={event.id}
-                    className="w-[400px] sm:w-[320px] flex-none max-w-[400px] mx-auto sm:mx-0 bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition-shadow flex flex-col"
+                    className="w-[360px] sm:w-[320px] flex-none max-w-[400px] mx-auto sm:mx-0 bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition-shadow flex flex-col"
                   >
                     <div className="relative h-48">
                       <img
@@ -254,7 +254,7 @@ const BlogCardGrid = () => {
               </div>
             </div>
             <button 
-              onClick={() => document.querySelector('.scroll-container')?.scrollBy({ left: 412, behavior: 'smooth' })}
+              onClick={() => document.querySelector('.scroll-container')?.scrollBy({ left: 372, behavior: 'smooth' })}
               className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-white/80 rounded-full shadow-sm hover:bg-white transition-colors block"
             >
               <FaChevronRight className="text-[#6D7074]" />
