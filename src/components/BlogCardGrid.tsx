@@ -182,7 +182,7 @@ const BlogCardGrid = () => {
   }
 
   return (
-    <div className="w-full bg-[#E5E7EB] pb-8">
+    <div className="w-full bg-[#E5E7EB] pb-8" id="news">
       <div className="container mx-auto px-2 sm:px-4 md:px-6">
         <section className="mb-8 sm:mb-12">
           <h2 className="text-[28px] sm:text-[36px] font-bold mb-4 sm:mb-6">Recommended Events</h2>
