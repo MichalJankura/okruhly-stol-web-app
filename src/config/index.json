@@ -8,6 +8,11 @@
       "name": "Novinky",
       "href": "news"
     },
+    
+    {
+      "name": "Udalosti",
+      "href": "events"
+    },
     {
       "name": "Členstvo",
       "href": "features"
