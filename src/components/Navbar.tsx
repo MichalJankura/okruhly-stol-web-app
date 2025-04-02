@@ -2,6 +2,8 @@ import { Disclosure as HeadlessDisclosure, Menu as HeadlessMenu } from '@headles
 import { Bars3Icon, BellIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import config from '../config/index.json'
+import { useState, useEffect } from 'react'
+import { eventEmitter } from '../utils/events'
 
 // Updated downloadItems to use real document files
 const downloadItems = [
@@ -44,7 +46,48 @@ const handleDocumentDownload = (e: React.MouseEvent<HTMLAnchorElement>, fileName
   window.open(filePath, '_blank');
 };
 
+// Add this interface for TypeScript
+interface User {
+  firstName?: string;
+  lastName?: string;
+  email: string;
+}
+
 export default function Navbar() {
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    // Check for user data in localStorage when component mounts
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      const parsedUser = JSON.parse(userData);
+      console.log('Loaded user data:', parsedUser);
+      setUser(parsedUser);
+    }
+
+    // Subscribe to auth changes
+    const unsubscribe = eventEmitter.subscribe('authChange', () => {
+      const userData = localStorage.getItem('user');
+      if (userData) {
+        const parsedUser = JSON.parse(userData);
+        console.log('Updated user data:', parsedUser);
+        setUser(parsedUser);
+      } else {
+        setUser(null);
+      }
+    });
+
+    // Cleanup subscription
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+    eventEmitter.emit('authChange');
+  };
+
   return (
     <HeadlessDisclosure as="nav" 
       className="relative bg-cover bg-center"
@@ -126,6 +169,13 @@ export default function Navbar() {
               <BellIcon aria-hidden="true" className="size-6" />
             </button>
 
+            {/* Add user name display */}
+            {user && (
+              <span className="ml-3 text-white font-medium flex items-center">
+                Hi, {user.firstName || 'User'} 👋
+              </span>
+            )}
+
             {/* Profile dropdown */}
             <HeadlessMenu as="div" className="relative ml-3">
               <div>
@@ -134,7 +184,7 @@ export default function Navbar() {
                   <span className="sr-only">Open user menu</span>
                   <img
                     alt=""
-                    src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"
+                    src={user ? "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" : ""}
                     className="size-8 rounded-full"
                   />
                 </HeadlessMenu.Button>
@@ -160,12 +210,12 @@ export default function Navbar() {
                   </a>
                 </HeadlessMenu.Item>
                 <HeadlessMenu.Item>
-                  <a
-                    href="#"
-                    className="block px-4 py-2 text-sm text-gray-700 data-focus:bg-gray-100 data-focus:outline-hidden"
+                  <button
+                    onClick={handleLogout}
+                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 data-focus:bg-gray-100 data-focus:outline-hidden"
                   >
                     Sign out
-                  </a>
+                  </button>
                 </HeadlessMenu.Item>
               </HeadlessMenu.Items>
             </HeadlessMenu>
