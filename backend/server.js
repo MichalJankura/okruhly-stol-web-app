@@ -343,14 +343,6 @@ app.get('/api/categories', async (req, res) => {
             count: parseInt(row.count)
         }));
         
-        // Add the 'All' option with total count
-        const totalCount = result.rows.reduce((total, row) => total + parseInt(row.count), 0);
-        categoriesData.unshift({
-            name: 'All',
-            value: 'All',
-            count: totalCount
-        });
-        
         console.log('Final Categories Response:', categoriesData);
         res.json(categoriesData);
     } catch (err) {
