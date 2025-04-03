@@ -23,7 +23,7 @@ interface BlogArticle {
 
 const BlogCardGrid = () => {
   const [favorites, setFavorites] = useState<number[]>([]);
-  const [category, setCategory] = useState("");
+  const [category, setCategory] = useState("All Categories");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [blogArticles, setBlogArticles] = useState<BlogArticle[]>([]);
@@ -135,7 +135,7 @@ const BlogCardGrid = () => {
   // Update displayed articles when filters change
   useEffect(() => {
     const filtered = allArticles.filter(event => {
-      const matchesCategory = !category || event.category.toLowerCase() === category.toLowerCase();
+      const matchesCategory = category === "All Categories" || event.category.toLowerCase() === category.toLowerCase();
       const matchesLocation = selectedLocation === "all" || event.location === selectedLocation;
       const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          event.shortText.toLowerCase().includes(searchQuery.toLowerCase());
@@ -304,7 +304,7 @@ const BlogCardGrid = () => {
                       onChange={(e) => setCategory(e.target.value)}
                       className="w-full px-3 py-2 rounded-lg bg-[#F0F1F3] text-[#020817] border border-[#E0E0E0]"
                     >
-                      <option value="">Select a category</option>
+                      <option value="All Categories">All Categories</option>
                       {categories.map((cat) => (
                         <option key={cat} value={cat}>
                           {cat}
@@ -404,7 +404,7 @@ const BlogCardGrid = () => {
           </div>
 
           {/* Pagination Controls */}
-          {filteredEvents.length === eventsPerPage && (
+          {filteredEvents.length > 0 && (
             <div className="flex justify-center gap-2 mt-8">
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
@@ -414,11 +414,12 @@ const BlogCardGrid = () => {
                 Previous
               </button>
               <span className="px-4 py-2">
-                Page {currentPage}
+                Page {currentPage} of {Math.ceil(allArticles.length / eventsPerPage)}
               </span>
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
-                className="px-4 py-2 bg-[#0D6EFD] text-white rounded-lg"
+                disabled={currentPage >= Math.ceil(allArticles.length / eventsPerPage)}
+                className="px-4 py-2 bg-[#0D6EFD] text-white rounded-lg disabled:opacity-50"
               >
                 Next
               </button>
