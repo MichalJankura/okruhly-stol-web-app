@@ -67,25 +67,30 @@ const BlogCardGrid = () => {
         
         const postsData = data.posts || data.articles || [];
         
-        const formattedArticles = postsData.map((post: any) => ({
-          id: post.id,
-          title: post.title,
-          category: post.category || 'Unknown',
-          date: post.date,
-          month: post.month,
-          shortText: post.short_text || post.shortText || '',
-          fullText: post.full_text || post.fullText || '',
-          image: post.image || 'https://images.unsplash.com/photo-1540575861501-7cf05a4b125a?ixlib=rb-4.0.3&auto=format&fit=crop&w=320&q=80',
-          event_start_date: post.event_start_date,
-          event_end_date: post.event_end_date,
-          start_time: post.start_time,
-          end_time: post.end_time,
-          tickets: post.tickets,
-          link_to: post.link_to,
-          price: post.price || 0,
-          location: post.location || 'Miesto Neznáme',
-          map_url: post.map_url
-        }));
+        const formattedArticles = postsData.map((post: any) => {
+          // Debug log for map_url
+          console.log(`[DEBUG] Received map_url for event "${post.title}": ${post.map_url}`);
+          
+          return {
+            id: post.id,
+            title: post.title,
+            category: post.category || 'Unknown',
+            date: post.date,
+            month: post.month,
+            shortText: post.short_text || post.shortText || '',
+            fullText: post.full_text || post.fullText || '',
+            image: post.image || 'https://images.unsplash.com/photo-1540575861501-7cf05a4b125a?ixlib=rb-4.0.3&auto=format&fit=crop&w=320&q=80',
+            event_start_date: post.event_start_date,
+            event_end_date: post.event_end_date,
+            start_time: post.start_time,
+            end_time: post.end_time,
+            tickets: post.tickets,
+            link_to: post.link_to,
+            price: post.price || 0,
+            location: post.location || 'Miesto Neznáme',
+            map_url: post.map_url
+          };
+        });
 
         // Debug table for events
         console.table(formattedArticles.map((event: BlogArticle) => ({
@@ -469,8 +474,14 @@ const BlogCardGrid = () => {
 
 // EventModal component
 const EventModal = ({ event, onClose }: { event: BlogArticle; onClose: () => void }) => {
-  // Use the map_url from the event object
-  const mapUrl = event.map_url || "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2641.8383484567!2d21.2353986!3d48.9977246!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x473eed62a563a9ef%3A0xb18994e09e7a9e06!2sJarkov%C3%A1%203110%2F77%2C%20080%2001%20Pre%C5%A1ov!5e0!3m2!1ssk!2ssk!4v1709912345678!5m2!1ssk!2ssk";
+  // Use the map_url from the event object, but if location is "Miesto neznáme", use Prešov map
+  const presovMapUrl = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2641.8383484567!2d21.2353986!3d48.9977246!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x473eed62a563a9ef%3A0xb18994e09e7a9e06!2sJarkov%C3%A1%203110%2F77%2C%20080%2001%20Pre%C5%A1ov!5e0!3m2!1ssk!2ssk!4v1709912345678!5m2!1ssk!2ssk";
+  const mapUrl = event.location === "Miesto neznáme" || event.location === "Miesto Neznáme" 
+    ? presovMapUrl 
+    : (event.map_url || presovMapUrl);
+  
+  // Debug log for map URL in modal
+  console.log(`[DEBUG] Using map URL in modal for event "${event.title}" with location "${event.location}": ${mapUrl}`);
   
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
