@@ -209,7 +209,7 @@ const SimpleBlog = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100" id="news">
-      <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight text-center tracking-wide bg-indigo-600">
+      <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight text-center tracking-wide bg-indigo-600">
           Novinky
           </h2>
       <nav className="sticky top-0 z-20 bg-card bg-indigo-600 p-4">
