@@ -181,22 +181,26 @@ const BlogCardGrid = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background p-6 flex items-center justify-center">
-        <p>Loading...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 pb-8">
+        <div className="container mx-auto px-2 sm:px-4 md:px-6">
+          <p>Loading...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background p-6 flex items-center justify-center text-red-500">
-        {error}
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 pb-8">
+        <div className="container mx-auto px-2 sm:px-4 md:px-6">
+          {error}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full bg-[#E5E7EB] pb-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 pb-8">
       <div className="container mx-auto px-2 sm:px-4 md:px-6">
         <section className="mb-8 sm:mb-12">
           <h2 className="text-[28px] sm:text-[36px] font-bold mb-4 sm:mb-6">Odporúčané podujatia</h2>
