@@ -89,7 +89,10 @@ const MainHero = () => {
                   Prihlásiť sa
                 </button>
               )}
-              <button className="px-8 py-3 bg-emerald-600 text-white rounded-lg shadow-lg hover:bg-emerald-700 transition-colors font-semibold">
+              <button 
+                onClick={() => document.getElementById('events')?.scrollIntoView({ behavior: 'smooth' })} 
+                className="px-8 py-3 bg-emerald-600 text-white rounded-lg shadow-lg hover:bg-emerald-700 transition-colors font-semibold"
+              >
                 Prezrieť udalosti
               </button>
             </div>
