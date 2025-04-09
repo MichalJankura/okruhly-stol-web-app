@@ -24,7 +24,7 @@ interface BlogArticle {
 
 const BlogCardGrid = () => {
   const [favorites, setFavorites] = useState<number[]>([]);
-  const [category, setCategory] = useState("All Categories");
+  const [category, setCategory] = useState("Všetky kategórie");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [blogArticles, setBlogArticles] = useState<BlogArticle[]>([]);
@@ -144,7 +144,7 @@ const BlogCardGrid = () => {
   // Update displayed articles when filters change
   useEffect(() => {
     const filtered = allArticles.filter(event => {
-      const matchesCategory = category === "All Categories" || event.category.toLowerCase() === category.toLowerCase();
+      const matchesCategory = category === "Všetky kategórie" || event.category.toLowerCase() === category.toLowerCase();
       const matchesLocation = selectedLocation === "all" || event.location === selectedLocation;
       const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          event.shortText.toLowerCase().includes(searchQuery.toLowerCase());
@@ -199,7 +199,7 @@ const BlogCardGrid = () => {
     <div className="w-full bg-[#E5E7EB] pb-8">
       <div className="container mx-auto px-2 sm:px-4 md:px-6">
         <section className="mb-8 sm:mb-12">
-          <h2 className="text-[28px] sm:text-[36px] font-bold mb-4 sm:mb-6">Recommended Events</h2>
+          <h2 className="text-[28px] sm:text-[36px] font-bold mb-4 sm:mb-6">Odporúčané podujatia</h2>
           <div className="relative">
             <button 
               onClick={() => document.querySelector('.scroll-container')?.scrollBy({ left: -372, behavior: 'smooth' })}
@@ -262,7 +262,7 @@ const BlogCardGrid = () => {
                           onClick={() => handleViewDetails(event)}
                           className="px-4 py-2 bg-[#0D6EFD] text-white rounded-lg hover:opacity-90 transition-opacity"
                         >
-                          View Details
+                          Zobraziť detaily
                         </button>
                       </div>
                     </div>
@@ -283,7 +283,7 @@ const BlogCardGrid = () => {
           <div className="flex-1 relative">
             <input
               type="text"
-              placeholder="Search events..."
+              placeholder="Vyhľadať podujatia..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full px-4 py-2 pl-10 rounded-lg bg-[#F0F1F3] text-[#020817] border border-[#E0E0E0]"
@@ -297,14 +297,14 @@ const BlogCardGrid = () => {
               className="w-full sm:w-auto px-4 py-2 bg-[#0D6EFD] text-white rounded-lg flex items-center justify-center gap-2"
             >
               <FaFilter />
-              Filters
+              Filtre
             </button>
 
             {showFilters && (
               <div className="fixed sm:absolute inset-0 sm:inset-auto sm:top-full sm:left-1/2 sm:-translate-x-1/2 top-0 right-0 w-full sm:w-80 bg-white rounded-lg shadow-sm p-4 z-50 sm:z-10 border border-[#E0E0E0] mt-2">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center sm:hidden">
-                    <h3 className="text-lg font-semibold">Filters</h3>
+                    <h3 className="text-lg font-semibold">Filtre</h3>
                     <button
                       onClick={() => setShowFilters(false)}
                       className="p-2 hover:bg-gray-100 rounded-full"
@@ -315,13 +315,13 @@ const BlogCardGrid = () => {
                     </button>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Category</label>
+                    <label className="block text-sm font-medium mb-1">Kategória</label>
                     <select
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
                       className="w-full px-3 py-2 rounded-lg bg-[#F0F1F3] text-[#020817] border border-[#E0E0E0]"
                     >
-                      <option value="All Categories">All Categories</option>
+                      <option value="Všetky kategórie">Všetky kategórie</option>
                       {categories.map((cat) => (
                         <option key={cat} value={cat}>
                           {cat}
@@ -331,7 +331,7 @@ const BlogCardGrid = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-1">Location</label>
+                    <label className="block text-sm font-medium mb-1">Miesto</label>
                     <select
                       value={selectedLocation}
                       onChange={(e) => setSelectedLocation(e.target.value)}
@@ -339,14 +339,14 @@ const BlogCardGrid = () => {
                     >
                       {locations.map((loc) => (
                         <option key={loc} value={loc}>
-                          {loc === 'all' ? 'All Locations' : loc}
+                          {loc === 'all' ? 'Všetky miesta' : loc}
                         </option>
                       ))}
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-1">Date Range</label>
+                    <label className="block text-sm font-medium mb-1">Dátum</label>
                     <div className="flex flex-col gap-2">
                       <input
                         type="date"
@@ -370,7 +370,7 @@ const BlogCardGrid = () => {
 
         <section>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-            <h2 className="text-[36px] font-bold">All Events</h2>
+            <h2 className="text-[36px] font-bold">Všetky podujatia</h2>
           </div>
 
           <div className="w-full">
@@ -414,7 +414,7 @@ const BlogCardGrid = () => {
                         onClick={() => handleViewDetails(event)}
                         className="px-4 py-2 bg-[#0D6EFD] text-white rounded-lg hover:opacity-90 transition-opacity"
                       >
-                        View Details
+                        Zobraziť detaily
                       </button>
                     </div>
                   </div>
@@ -431,17 +431,17 @@ const BlogCardGrid = () => {
                 disabled={currentPage === 1}
                 className="px-4 py-2 bg-[#0D6EFD] text-white rounded-lg disabled:opacity-50"
               >
-                Previous
+                Predchádzajúca
               </button>
               <span className="px-4 py-2">
-                Page {currentPage} of {Math.ceil(allArticles.length / eventsPerPage)}
+                Strana {currentPage} z {Math.ceil(allArticles.length / eventsPerPage)}
               </span>
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage >= Math.ceil(allArticles.length / eventsPerPage)}
                 className="px-4 py-2 bg-[#0D6EFD] text-white rounded-lg disabled:opacity-50"
               >
-                Next
+                Ďalšia
               </button>
             </div>
           )}
@@ -510,7 +510,7 @@ const EventModal = ({ event, onClose }: { event: BlogArticle; onClose: () => voi
             {event.start_time && (
               <div className="flex items-center gap-2 text-[#6D7074]">
                 <FaClock />
-                <span>{event.start_time} - {event.end_time || 'End'}</span>
+                <span>{event.start_time} - {event.end_time || 'Koniec'}</span>
               </div>
             )}
             <div className="flex items-center gap-2 text-[#6D7074]">
@@ -526,14 +526,14 @@ const EventModal = ({ event, onClose }: { event: BlogArticle; onClose: () => voi
           </div>
 
           <div className="mb-6">
-            <h3 className="text-lg font-bold text-[#020817] mb-2">About Event</h3>
+            <h3 className="text-lg font-bold text-[#020817] mb-2">O podujatí</h3>
             <p className="text-[#020817]">
               {event.fullText || event.shortText}
             </p>
           </div>
 
           <div className="mb-6">
-            <h3 className="text-lg font-bold text-[#020817] mb-2">Location</h3>
+            <h3 className="text-lg font-bold text-[#020817] mb-2">Miesto konania</h3>
             <div className="h-[300px] w-full rounded-lg overflow-hidden">
               <iframe
                 src={mapUrl}
@@ -550,9 +550,9 @@ const EventModal = ({ event, onClose }: { event: BlogArticle; onClose: () => voi
 
           {event.price !== undefined && event.price > 0 && (
             <div className="flex justify-between items-center pt-4 border-t border-[#E0E0E0]">
-              <span className="text-xl font-semibold text-[#0D6EFD]">${event.price}</span>
+              <span className="text-xl font-semibold text-[#0D6EFD]">{event.price} €</span>
               <button className="px-6 py-2 bg-[#0D6EFD] text-white rounded-lg hover:opacity-90 transition-opacity">
-                Book Now
+                Rezervovať
               </button>
             </div>
           )}
