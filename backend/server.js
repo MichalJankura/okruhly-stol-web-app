@@ -26,6 +26,20 @@ const pool = new Pool({
     }
 });
 
+// Function to generate Google Maps embed URL from location
+const getGoogleMapsEmbedUrl = (location) => {
+    if (!location || location === 'Unknown' || location === 'Miesto Neznáme') {
+        // Default to Prešov if location is not provided
+        return "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2641.8383484567!2d21.2353986!3d48.9977246!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x473eed62a563a9ef%3A0xb18994e09e7a9e06!2sJarkov%C3%A1%203110%2F77%2C%20080%2001%20Pre%C5%A1ov!5e0!3m2!1ssk!2ssk!4v1709912345678!5m2!1ssk!2ssk";
+    }
+    
+    // Encode the location for use in the URL
+    const encodedLocation = encodeURIComponent(location);
+    
+    // Create a Google Maps embed URL with the location
+    return `https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2641.8383484567!2d21.2353986!3d48.9977246!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x473eed62a563a9ef%3A0xb18994e09e7a9e06!2s${encodedLocation}!5e0!3m2!1ssk!2ssk!4v1709912345678!5m2!1ssk!2ssk`;
+};
+
 // Test database connection
 pool.connect((err, client, done) => {
     if (err) {
@@ -73,14 +87,12 @@ app.get('/api/blog-posts', async (req, res) => {
         }
 
         if (event_type && event_type !== 'All') {
-            console.log('Filtering by event_type:', event_type);
             conditions.push(`event_type = $${paramCounter}`);
             queryParams.push(event_type);
             paramCounter++;
         }
 
         if (location && location !== 'All') {
-            console.log('Filtering by location:', location);
             conditions.push(`location = $${paramCounter}`);
             queryParams.push(location);
             paramCounter++;
@@ -114,12 +126,20 @@ app.get('/api/blog-posts', async (req, res) => {
         const finalParams = [...queryParams, limit, offset];
         const eventsResult = await pool.query(eventsQuery, finalParams);
 
+        // Debug print to verify map URL generation
+        if (eventsResult.rows.length > 0) {
+            const sampleEvent = eventsResult.rows[0];
+            const mapUrl = getGoogleMapsEmbedUrl(sampleEvent.location);
+            console.log(`[DEBUG] Map URL for location "${sampleEvent.location}": ${mapUrl}`);
+        }
+
         res.json({
             posts: eventsResult.rows.map(event => ({
                 id: event.id,
                 title: event.title,
                 category: event.event_type || 'Unknown', // Map event_type to category
                 location: event.location || 'Unknown', // Add location
+                map_url: getGoogleMapsEmbedUrl(event.location), // Add map URL
                 date: new Date(event.event_start_date).getFullYear().toString(),
                 month: new Date(event.event_start_date).toLocaleString('sk-SK', { month: 'long' }),
                 short_text: event.description ? event.description.substring(0, 100) + '...' : '',
@@ -153,16 +173,20 @@ app.get('/api/blog-posts/:id', async (req, res) => {
         }
 
         const event = result.rows[0];
-        const shortText = event.description ? event.description.substring(0, 150) + '...' : ''; // Limit to 150 characters
-
+        
+        // Debug print to verify map URL generation for single event
+        const mapUrl = getGoogleMapsEmbedUrl(event.location);
+        console.log(`[DEBUG] Map URL for single event "${event.title}" with location "${event.location}": ${mapUrl}`);
+        
         res.json({
             id: event.id,
             title: event.title,
             category: event.event_type || 'Unknown',
-            location: event.location || 'Unknown', // Add location
+            location: event.location || 'Unknown',
+            map_url: mapUrl, // Use the already generated map URL
             date: new Date(event.event_start_date).getFullYear().toString(),
             month: new Date(event.event_start_date).toLocaleString('sk-SK', { month: 'long' }),
-            short_text: shortText, // Use the limited text
+            short_text: event.description ? event.description.substring(0, 150) + '...' : '',
             full_text: event.description || '',
             image: event.image_url || 'https://images.unsplash.com/photo-1540575861501-7cf05a4b125a?ixlib=rb-4.0.3&auto=format&fit=crop&w=320&q=80',
             event_start_date: event.event_start_date,
