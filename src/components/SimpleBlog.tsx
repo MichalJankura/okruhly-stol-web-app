@@ -212,7 +212,7 @@ const SimpleBlog = () => {
       <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight text-center tracking-wide bg-indigo-600">
           Novinky
           </h2>
-      <nav className="sticky top-0 z-50 bg-card bg-indigo-600 p-4">
+      <nav className="sticky top-0 z-20 bg-card bg-indigo-600 p-4">
         <div className="max-w-7xl mx-auto">
           <div className="md:flex items-center gap-4">
             <div className="relative flex-1 mb-4 md:mb-0">
