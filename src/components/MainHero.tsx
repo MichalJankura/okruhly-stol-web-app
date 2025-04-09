@@ -56,17 +56,17 @@ const MainHero = () => {
         <div className="flex flex-col lg:flex-row items-center gap-12">
           {/* Left Column */}
           <div className="flex-1 space-y-8">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-slate-800 leading-tight">
-              OKRÚHLY STÔL RUSÍNOV <br /> SLOVENSKA
-            </h1>
-
-            <div className="relative w-48 h-48 mx-auto lg:mx-0">
+            <div className="relative w-[17.5rem] h-[17.5rem] mx-auto flex justify-center">
               <img
                 src="../assets/images/osrs_clean.png"
                 alt="Company Logo"
                 className="rounded-full w-full h-full object-cover transform transition-transform hover:scale-105"
               />
             </div>
+            
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-slate-800 leading-tight">
+              OKRÚHLY STÔL RUSÍNOV <br /> SLOVENSKA
+            </h1>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {stats.map((stat) => (
@@ -86,11 +86,11 @@ const MainHero = () => {
                   onClick={() => setShowLogin(true)}
                   className="px-8 py-3 bg-indigo-600 text-white rounded-lg shadow-lg hover:bg-indigo-700 transition-colors font-semibold"
                 >
-                  Login
+                  Prihlásiť sa
                 </button>
               )}
               <button className="px-8 py-3 bg-emerald-600 text-white rounded-lg shadow-lg hover:bg-emerald-700 transition-colors font-semibold">
-                View Events
+                Prezrieť udalosti
               </button>
             </div>
           </div>
