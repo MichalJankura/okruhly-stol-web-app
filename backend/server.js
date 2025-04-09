@@ -139,7 +139,7 @@ app.get('/api/blog-posts', async (req, res) => {
                 title: event.title,
                 category: event.event_type || 'Unknown', // Map event_type to category
                 location: event.location || 'Unknown', // Add location
-                map_url: getGoogleMapsEmbedUrl(event.location), // Add map URL
+                map_url: event.map_url || getGoogleMapsEmbedUrl(event.location), // Use the map_url if available, otherwise generate a new one
                 date: new Date(event.event_start_date).getFullYear().toString(),
                 month: new Date(event.event_start_date).toLocaleString('sk-SK', { month: 'long' }),
                 short_text: event.description ? event.description.substring(0, 100) + '...' : '',
@@ -175,7 +175,7 @@ app.get('/api/blog-posts/:id', async (req, res) => {
         const event = result.rows[0];
         
         // Debug print to verify map URL generation for single event
-        const mapUrl = getGoogleMapsEmbedUrl(event.location);
+        const mapUrl = event.map_url || getGoogleMapsEmbedUrl(event.location);
         console.log(`[DEBUG] Map URL for single event "${event.title}" with location "${event.location}": ${mapUrl}`);
         
         res.json({
