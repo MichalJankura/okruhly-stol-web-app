@@ -15,8 +15,8 @@ const MainHeroImage = () => {
       setTimeout(() => {
         setCurrentImageIndex((prevIndex) => (prevIndex + 1) % backgroundImages.length);
         setIsTransitioning(false);
-      }, 500);
-    }, 5000);
+      }, 1000);
+    }, 7000);
 
     // Cleanup interval pri odmontovaní komponenty
     return () => clearInterval(intervalId);
