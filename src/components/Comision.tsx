@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import React from 'react';
 
 export default function Comision() {
   const timelineData = [
@@ -71,22 +71,22 @@ export default function Comision() {
     },
   ];
 
-  useEffect(() => {
-    const handleScroll = () => {
-      const elements = document.querySelectorAll('.animate-on-scroll');
-      elements.forEach((element) => {
-        const rect = element.getBoundingClientRect();
-        if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
-          element.classList.add('animate-slide-up');
-        } else {
-          element.classList.remove('animate-slide-up');
-        }
-      });
-    };
+  // useEffect(() => {
+  //   const handleScroll = () => {
+  //     const elements = document.querySelectorAll('.animate-on-scroll');
+  //     elements.forEach((element) => {
+  //       const rect = element.getBoundingClientRect();
+  //       if (rect.top >= 0 && rect.bottom <= window.innerHeight) {
+  //         element.classList.add('animate-slide-up');
+  //       } else {
+  //         element.classList.remove('animate-slide-up');
+  //       }
+  //     });
+  //   };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  //   window.addEventListener('scroll', handleScroll);
+  //   return () => window.removeEventListener('scroll', handleScroll);
+  // }, []);
 
   return (
     <div
@@ -128,7 +128,7 @@ export default function Comision() {
                     : 'bg-blue-500/90 col-start-1 col-end-5 ml-auto backdrop-blur-sm'
                 }`}
               >
-                <h3 className="font-semibold text-lg mb-1">{item.title}</h3>
+                <h3 className="text-xl font-semibold mb-1">{item.title}</h3>
                 <div className="leading-tight text-justify">{item.text}</div>
               </div>
               {item.side === 'left' && (
