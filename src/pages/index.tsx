@@ -10,7 +10,7 @@ import Team from '../components/Team';
 import Navbar from '../components/Navbar';
 import SimpleBlog from '../components/SimpleBlog';
 import MainHeroImage from '../components/MainHeroImage';
-
+import ChatBot from '../components/ChatBot/ChatBot';
 const App = () => {
   return (
     <div className={`bg-gradient-to-br from-slate-50 to-slate-100 grid gap-y-0 overflow-hidden`}>
@@ -21,20 +21,19 @@ const App = () => {
         <MainHeroImage />
         </div>
       </div>
-      
       <LazyShow>
         <>
+        <ChatBot />
         
-        
-        </>
-      </LazyShow>
       
       <LazyShow>
         <>
           <SimpleBlog />
         </>
       </LazyShow>
-      
+
+
+
       <LazyShow>
         <>
           <BlogCardGrid />
@@ -67,6 +66,8 @@ const App = () => {
         <>
         <Contact />
         </>
+      </LazyShow>
+      </>
       </LazyShow>
       {/* <Analytics /> */}
     </div>
