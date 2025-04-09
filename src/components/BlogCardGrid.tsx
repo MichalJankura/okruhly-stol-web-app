@@ -24,7 +24,7 @@ interface BlogArticle {
 
 const BlogCardGrid = () => {
   const [favorites, setFavorites] = useState<number[]>([]);
-  const [category, setCategory] = useState("Všetky kategórie");
+  const [category, setCategory] = useState("All Categories");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [blogArticles, setBlogArticles] = useState<BlogArticle[]>([]);
@@ -67,30 +67,25 @@ const BlogCardGrid = () => {
         
         const postsData = data.posts || data.articles || [];
         
-        const formattedArticles = postsData.map((post: any) => {
-          // Debug log for map_url
-          console.log(`[DEBUG] Received map_url for event "${post.title}": ${post.map_url}`);
-          
-          return {
-            id: post.id,
-            title: post.title,
-            category: post.category || 'Unknown',
-            date: post.date,
-            month: post.month,
-            shortText: post.short_text || post.shortText || '',
-            fullText: post.full_text || post.fullText || '',
-            image: post.image || 'https://images.unsplash.com/photo-1540575861501-7cf05a4b125a?ixlib=rb-4.0.3&auto=format&fit=crop&w=320&q=80',
-            event_start_date: post.event_start_date,
-            event_end_date: post.event_end_date,
-            start_time: post.start_time,
-            end_time: post.end_time,
-            tickets: post.tickets,
-            link_to: post.link_to,
-            price: post.price || 0,
-            location: post.location || 'Miesto Neznáme',
-            map_url: post.map_url
-          };
-        });
+        const formattedArticles = postsData.map((post: any) => ({
+          id: post.id,
+          title: post.title,
+          category: post.category || 'Unknown',
+          date: post.date,
+          month: post.month,
+          shortText: post.short_text || post.shortText || '',
+          fullText: post.full_text || post.fullText || '',
+          image: post.image || 'https://images.unsplash.com/photo-1540575861501-7cf05a4b125a?ixlib=rb-4.0.3&auto=format&fit=crop&w=320&q=80',
+          event_start_date: post.event_start_date,
+          event_end_date: post.event_end_date,
+          start_time: post.start_time,
+          end_time: post.end_time,
+          tickets: post.tickets,
+          link_to: post.link_to,
+          price: post.price || 0,
+          location: post.location || 'Miesto Neznáme',
+          map_url: post.map_url
+        }));
 
         // Debug table for events
         console.table(formattedArticles.map((event: BlogArticle) => ({
@@ -144,7 +139,7 @@ const BlogCardGrid = () => {
   // Update displayed articles when filters change
   useEffect(() => {
     const filtered = allArticles.filter(event => {
-      const matchesCategory = category === "Všetky kategórie" || event.category.toLowerCase() === category.toLowerCase();
+      const matchesCategory = category === "All Categories" || event.category.toLowerCase() === category.toLowerCase();
       const matchesLocation = selectedLocation === "all" || event.location === selectedLocation;
       const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          event.shortText.toLowerCase().includes(searchQuery.toLowerCase());
@@ -181,29 +176,25 @@ const BlogCardGrid = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 pb-8">
-        <div className="container mx-auto px-2 sm:px-4 md:px-6">
-          <p>Loading...</p>
-        </div>
+      <div className="min-h-screen bg-background p-6 flex items-center justify-center" id="events">
+        <p>Loading...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 pb-8">
-        <div className="container mx-auto px-2 sm:px-4 md:px-6">
-          {error}
-        </div>
+      <div className="min-h-screen bg-background p-6 flex items-center justify-center text-red-500" id="events">
+        {error}
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 pb-8">
+    <div className="w-full bg-[#E5E7EB] pb-8" id="events">
       <div className="container mx-auto px-2 sm:px-4 md:px-6">
         <section className="mb-8 sm:mb-12">
-          <h2 className="text-[28px] sm:text-[36px] font-bold mb-4 sm:mb-6">Odporúčané podujatia</h2>
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 sm:mb-6">Recommended Events</h2>
           <div className="relative">
             <button 
               onClick={() => document.querySelector('.scroll-container')?.scrollBy({ left: -372, behavior: 'smooth' })}
@@ -237,7 +228,7 @@ const BlogCardGrid = () => {
                       </button>
                     </div>
                     <div className="p-4 flex flex-col h-[280px]">
-                      <h3 className="text-[14px] font-semibold text-[#020817] mb-2">{event.title}</h3>
+                      <h3 className="text-xl font-semibold text-[#020817] mb-2">{event.title}</h3>
                       <div className="flex items-center gap-2 text-[#6D7074] mb-2">
                         <FaClock />
                         <span>{format(new Date(event.event_start_date || event.date), "MMM d, yyyy")}</span>
@@ -266,7 +257,7 @@ const BlogCardGrid = () => {
                           onClick={() => handleViewDetails(event)}
                           className="px-4 py-2 bg-[#0D6EFD] text-white rounded-lg hover:opacity-90 transition-opacity"
                         >
-                          Zobraziť detaily
+                          View Details
                         </button>
                       </div>
                     </div>
@@ -287,7 +278,7 @@ const BlogCardGrid = () => {
           <div className="flex-1 relative">
             <input
               type="text"
-              placeholder="Vyhľadať podujatia..."
+              placeholder="Search events..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full px-4 py-2 pl-10 rounded-lg bg-[#F0F1F3] text-[#020817] border border-[#E0E0E0]"
@@ -301,14 +292,14 @@ const BlogCardGrid = () => {
               className="w-full sm:w-auto px-4 py-2 bg-[#0D6EFD] text-white rounded-lg flex items-center justify-center gap-2"
             >
               <FaFilter />
-              Filtre
+              Filters
             </button>
 
             {showFilters && (
               <div className="fixed sm:absolute inset-0 sm:inset-auto sm:top-full sm:left-1/2 sm:-translate-x-1/2 top-0 right-0 w-full sm:w-80 bg-white rounded-lg shadow-sm p-4 z-50 sm:z-10 border border-[#E0E0E0] mt-2">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center sm:hidden">
-                    <h3 className="text-lg font-semibold">Filtre</h3>
+                    <h3 className="text-lg font-semibold">Filters</h3>
                     <button
                       onClick={() => setShowFilters(false)}
                       className="p-2 hover:bg-gray-100 rounded-full"
@@ -319,13 +310,13 @@ const BlogCardGrid = () => {
                     </button>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Kategória</label>
+                    <label className="block text-sm font-medium mb-1">Category</label>
                     <select
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
                       className="w-full px-3 py-2 rounded-lg bg-[#F0F1F3] text-[#020817] border border-[#E0E0E0]"
                     >
-                      <option value="Všetky kategórie">Všetky kategórie</option>
+                      <option value="All Categories">All Categories</option>
                       {categories.map((cat) => (
                         <option key={cat} value={cat}>
                           {cat}
@@ -335,7 +326,7 @@ const BlogCardGrid = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-1">Miesto</label>
+                    <label className="block text-sm font-medium mb-1">Location</label>
                     <select
                       value={selectedLocation}
                       onChange={(e) => setSelectedLocation(e.target.value)}
@@ -343,14 +334,14 @@ const BlogCardGrid = () => {
                     >
                       {locations.map((loc) => (
                         <option key={loc} value={loc}>
-                          {loc === 'all' ? 'Všetky miesta' : loc}
+                          {loc === 'all' ? 'All Locations' : loc}
                         </option>
                       ))}
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium mb-1">Dátum</label>
+                    <label className="block text-sm font-medium mb-1">Date Range</label>
                     <div className="flex flex-col gap-2">
                       <input
                         type="date"
@@ -374,7 +365,7 @@ const BlogCardGrid = () => {
 
         <section>
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-            <h2 className="text-[36px] font-bold">Všetky podujatia</h2>
+            <h2 className="text-3xl md:text-4xl font-bold">All Events</h2>
           </div>
 
           <div className="w-full">
@@ -403,7 +394,7 @@ const BlogCardGrid = () => {
                     </button>
                   </div>
                   <div className="p-4 flex flex-col h-[280px]">
-                    <h3 className="text-[14px] font-semibold text-[#020817] mb-2">{event.title}</h3>
+                    <h3 className="text-xl font-semibold text-[#020817] mb-2">{event.title}</h3>
                     <div className="flex items-center gap-2 text-[#6D7074] mb-2">
                       <FaClock />
                       <span>{format(new Date(event.event_start_date || event.date), "MMM d, yyyy")}</span>
@@ -418,7 +409,7 @@ const BlogCardGrid = () => {
                         onClick={() => handleViewDetails(event)}
                         className="px-4 py-2 bg-[#0D6EFD] text-white rounded-lg hover:opacity-90 transition-opacity"
                       >
-                        Zobraziť detaily
+                        View Details
                       </button>
                     </div>
                   </div>
@@ -435,17 +426,17 @@ const BlogCardGrid = () => {
                 disabled={currentPage === 1}
                 className="px-4 py-2 bg-[#0D6EFD] text-white rounded-lg disabled:opacity-50"
               >
-                Predchádzajúca
+                Previous
               </button>
               <span className="px-4 py-2">
-                Strana {currentPage} z {Math.ceil(allArticles.length / eventsPerPage)}
+                Page {currentPage} of {Math.ceil(allArticles.length / eventsPerPage)}
               </span>
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage >= Math.ceil(allArticles.length / eventsPerPage)}
                 className="px-4 py-2 bg-[#0D6EFD] text-white rounded-lg disabled:opacity-50"
               >
-                Ďalšia
+                Next
               </button>
             </div>
           )}
@@ -478,14 +469,8 @@ const BlogCardGrid = () => {
 
 // EventModal component
 const EventModal = ({ event, onClose }: { event: BlogArticle; onClose: () => void }) => {
-  // Use the map_url from the event object, but if location is "Miesto neznáme", use Prešov map
-  const presovMapUrl = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2641.8383484567!2d21.2353986!3d48.9977246!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x473eed62a563a9ef%3A0xb18994e09e7a9e06!2sJarkov%C3%A1%203110%2F77%2C%20080%2001%20Pre%C5%A1ov!5e0!3m2!1ssk!2ssk!4v1709912345678!5m2!1ssk!2ssk";
-  const mapUrl = event.location === "Miesto neznáme" || event.location === "Miesto Neznáme" 
-    ? presovMapUrl 
-    : (event.map_url || presovMapUrl);
-  
-  // Debug log for map URL in modal
-  console.log(`[DEBUG] Using map URL in modal for event "${event.title}" with location "${event.location}": ${mapUrl}`);
+  // Use the map_url from the event object
+  const mapUrl = event.map_url || "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2641.8383484567!2d21.2353986!3d48.9977246!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x473eed62a563a9ef%3A0xb18994e09e7a9e06!2sJarkov%C3%A1%203110%2F77%2C%20080%2001%20Pre%C5%A1ov!5e0!3m2!1ssk!2ssk!4v1709912345678!5m2!1ssk!2ssk";
   
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -514,7 +499,7 @@ const EventModal = ({ event, onClose }: { event: BlogArticle; onClose: () => voi
             {event.start_time && (
               <div className="flex items-center gap-2 text-[#6D7074]">
                 <FaClock />
-                <span>{event.start_time} - {event.end_time || 'Koniec'}</span>
+                <span>{event.start_time} - {event.end_time || 'End'}</span>
               </div>
             )}
             <div className="flex items-center gap-2 text-[#6D7074]">
@@ -530,14 +515,14 @@ const EventModal = ({ event, onClose }: { event: BlogArticle; onClose: () => voi
           </div>
 
           <div className="mb-6">
-            <h3 className="text-lg font-bold text-[#020817] mb-2">O podujatí</h3>
+            <h3 className="text-lg font-bold text-[#020817] mb-2">About Event</h3>
             <p className="text-[#020817]">
               {event.fullText || event.shortText}
             </p>
           </div>
 
           <div className="mb-6">
-            <h3 className="text-lg font-bold text-[#020817] mb-2">Miesto konania</h3>
+            <h3 className="text-lg font-bold text-[#020817] mb-2">Location</h3>
             <div className="h-[300px] w-full rounded-lg overflow-hidden">
               <iframe
                 src={mapUrl}
@@ -554,9 +539,9 @@ const EventModal = ({ event, onClose }: { event: BlogArticle; onClose: () => voi
 
           {event.price !== undefined && event.price > 0 && (
             <div className="flex justify-between items-center pt-4 border-t border-[#E0E0E0]">
-              <span className="text-xl font-semibold text-[#0D6EFD]">{event.price} €</span>
+              <span className="text-xl font-semibold text-[#0D6EFD]">${event.price}</span>
               <button className="px-6 py-2 bg-[#0D6EFD] text-white rounded-lg hover:opacity-90 transition-opacity">
-                Rezervovať
+                Book Now
               </button>
             </div>
           )}
