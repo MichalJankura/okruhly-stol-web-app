@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { FiArrowLeft, FiArrowRight, FiX, FiShare2, FiUser,FiCalendar} from "react-icons/fi";
 import { useRouter } from 'next/router';
 
@@ -21,11 +21,9 @@ const BlogPost: React.FC<BlogPostProps> = ({
     date,
     content,
     image,
-    postId,
     prevPostId,
     nextPostId
 }) => {
-    const [darkMode, setDarkMode] = useState(false);
     const router = useRouter();
 
     // Navigácia na predchádzajúci príspevok
@@ -87,7 +85,7 @@ const BlogPost: React.FC<BlogPostProps> = ({
     };
 
     return (
-        <div className={`min-h-screen bg-background dark:bg-dark-background transition-colors duration-300 ${darkMode ? "dark" : ""}`}>
+        <div className="min-h-screen bg-background dark:bg-dark-background transition-colors duration-300">
             <div className="container mx-auto px-4 py-8 max-w-4xl relative">
                 <div className="relative">
                     <button
