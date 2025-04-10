@@ -5,6 +5,7 @@ import config from '../config/index.json'
 import { useState, useEffect } from 'react'
 import { eventEmitter } from '../utils/events'
 import { useRouter } from 'next/router'
+import Login from './Registration/Login'
 
 // Updated downloadItems to use real document files
 const downloadItems = [
@@ -37,6 +38,7 @@ interface User {
 
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
+  const [showLogin, setShowLogin] = useState(false);
   const router = useRouter();
 
   // Add a function to handle document downloads
@@ -100,6 +102,15 @@ export default function Navbar() {
 
   const navigateToProfile = () => {
     router.push('/profile');
+  };
+
+  const handleRegisterClick = () => {
+    setShowLogin(false);
+    // You can add register modal functionality here if needed
+  };
+
+  const handleClose = () => {
+    setShowLogin(false);
   };
 
   return (
@@ -218,23 +229,23 @@ export default function Navbar() {
                         }}
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 data-focus:outline-hidden"
                       >
-                        Your Profile
+                        Tvoj účet
                       </a>
                     </HeadlessMenu.Item>
-                    <HeadlessMenu.Item>
+                    {/* <HeadlessMenu.Item>
                       <a
                         href="#"
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 data-focus:outline-hidden"
                       >
                         Settings
                       </a>
-                    </HeadlessMenu.Item>
+                    </HeadlessMenu.Item> */}
                     <HeadlessMenu.Item>
                       <button
                         onClick={handleLogout}
                         className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 data-focus:outline-hidden"
                       >
-                        Sign out
+                        Odhlásiť sa
                       </button>
                     </HeadlessMenu.Item>
                   </>
@@ -244,31 +255,11 @@ export default function Navbar() {
                       href="#"
                       onClick={(e) => {
                         e.preventDefault();
-                        // Navigate to login section on the home page
-                        if (window.location.pathname !== '/') {
-                          router.push('/#login');
-                        } else {
-                          const loginElement = document.getElementById('login');
-                          if (loginElement) {
-                            loginElement.scrollIntoView({
-                              behavior: 'smooth',
-                              block: 'start'
-                            });
-                          } else {
-                            // If element not found, try to find the login section by class
-                            const loginSection = document.querySelector('.login-section');
-                            if (loginSection) {
-                              loginSection.scrollIntoView({
-                                behavior: 'smooth',
-                                block: 'start'
-                              });
-                            }
-                          }
-                        }
+                        setShowLogin(true);
                       }}
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 data-focus:outline-hidden"
                     >
-                      Log in
+                      Prihlásiť sa
                     </a>
                   </HeadlessMenu.Item>
                 )}
@@ -325,6 +316,22 @@ export default function Navbar() {
           )}
         </div>
       </HeadlessDisclosure.Panel>
+
+      {showLogin && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="relative">
+            <button
+              onClick={handleClose}
+              className="absolute -top-4 -right-4 bg-white rounded-full p-2 text-gray-600 hover:text-gray-800 shadow-lg z-50"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <Login onRegisterClick={handleRegisterClick} onClose={handleClose} />
+          </div>
+        </div>
+      )}
     </HeadlessDisclosure>
   )
 }
