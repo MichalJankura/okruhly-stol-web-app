@@ -1,7 +1,4 @@
 import React, { useState, useReducer, useEffect } from "react";
-import { FaEye, FaEyeSlash, FaCamera } from "react-icons/fa";
-import { toast, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
 
 interface PreferencesState {
   eventCategories: string[];
@@ -61,6 +58,7 @@ const Profile = () => {
     email: "",
     password: ""
   });
+  const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
 
   // Use useEffect to set isClient to true after component mounts
   useEffect(() => {
@@ -87,11 +85,24 @@ const Profile = () => {
     }
   }, [isClient]);
 
+  // Auto-hide notification after 3 seconds
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        toast.error("Veľkosť súboru by mala byť menšia ako 5MB");
+        setNotification({
+          message: "Veľkosť súboru by mala byť menšia ako 5MB",
+          type: 'error'
+        });
         return;
       }
       const reader = new FileReader();
@@ -170,7 +181,10 @@ const Profile = () => {
     setUser(updatedUser);
     
     // Show success message
-    toast.success("Profil bol úspešne aktualizovaný!");
+    setNotification({
+      message: "Profil bol úspešne aktualizovaný!",
+      type: 'success'
+    });
     console.log({ formData, preferences });
   };
 
@@ -184,6 +198,14 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {notification && (
+        <div className={`fixed top-4 right-4 p-4 rounded-md shadow-lg z-50 ${
+          notification.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+        }`}>
+          {notification.message}
+        </div>
+      )}
+      
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto bg-card rounded-lg shadow-lg p-6">
           <h1 className="text-heading font-heading text-foreground mb-8">Nastavenia profilu</h1>
@@ -198,7 +220,9 @@ const Profile = () => {
                     className="w-32 h-32 rounded-full object-cover"
                   />
                   <label className="absolute bottom-0 right-0 bg-primary hover:bg-blue-600 text-white p-2 rounded-full cursor-pointer">
-                    <FaCamera />
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586a1 1 0 01-.707-.293l-1.121-1.121A2 2 0 0011.172 3H8.828a2 2 0 00-1.414.586L6.293 4.707A1 1 0 015.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                    </svg>
                     <input
                       type="file"
                       className="hidden"
@@ -255,7 +279,17 @@ const Profile = () => {
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 transform -translate-y-1/2"
                     >
-                      {showPassword ? <FaEyeSlash /> : <FaEye />}
+                      {showPassword ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
+                          <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                          <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
                     </button>
                   </div>
                   {errors.password && <p className="text-destructive mt-1">{errors.password}</p>}
@@ -376,7 +410,6 @@ const Profile = () => {
           </form>
         </div>
       </div>
-      <ToastContainer position="bottom-right" />
     </div>
   );
 };
