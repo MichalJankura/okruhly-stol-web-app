@@ -4,6 +4,7 @@ import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import config from '../config/index.json'
 import { useState, useEffect } from 'react'
 import { eventEmitter } from '../utils/events'
+import { useRouter } from 'next/router'
 
 // Updated downloadItems to use real document files
 const downloadItems = [
@@ -27,25 +28,6 @@ function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(' ')
 }
 
-const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>) => {
-  e.preventDefault();
-  const targetId = e.currentTarget.getAttribute('href')?.slice(1);
-  const element = document.getElementById(targetId || '');
-  if (element) {
-    element.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start'
-    });
-  }
-};
-
-// Add a function to handle document downloads
-const handleDocumentDownload = (e: React.MouseEvent<HTMLAnchorElement>, fileName: string) => {
-  e.preventDefault();
-  const filePath = `/assets/pdfs/${fileName}`;
-  window.open(filePath, '_blank');
-};
-
 // Add this interface for TypeScript
 interface User {
   firstName?: string;
@@ -55,6 +37,34 @@ interface User {
 
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
+  const router = useRouter();
+
+  // Add a function to handle document downloads
+  const handleDocumentDownload = (e: React.MouseEvent<HTMLAnchorElement>, fileName: string) => {
+    e.preventDefault();
+    const filePath = `/assets/pdfs/${fileName}`;
+    window.open(filePath, '_blank');
+  };
+
+  const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    const targetId = e.currentTarget.getAttribute('href')?.slice(1);
+    
+    // Check if we're on the profile page
+    if (window.location.pathname !== '/') {
+      // If on profile page, navigate to home page first
+      router.push('/');
+      return;
+    }
+    
+    const element = document.getElementById(targetId || '');
+    if (element) {
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
+  };
 
   useEffect(() => {
     // Check for user data in localStorage when component mounts
@@ -86,6 +96,10 @@ export default function Navbar() {
     localStorage.removeItem('user');
     setUser(null);
     eventEmitter.emit('authChange');
+  };
+
+  const navigateToProfile = () => {
+    router.push('/profile');
   };
 
   return (
@@ -172,7 +186,7 @@ export default function Navbar() {
             {/* Add user name display */}
             {user && (
               <span className="ml-3 text-white font-medium flex items-center">
-                Hi, {user.firstName || 'User'} 👋
+                Ahoj, {user.firstName || 'User'} 👋
               </span>
             )}
 
@@ -193,30 +207,71 @@ export default function Navbar() {
                 transition
                 className="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 ring-1 shadow-lg ring-black/5 transition focus:outline-hidden data-closed:scale-95 data-closed:transform data-closed:opacity-0 data-enter:duration-100 data-enter:ease-out data-leave:duration-75 data-leave:ease-in"
               >
-                <HeadlessMenu.Item>
-                  <a
-                    href="#"
-                    className="block px-4 py-2 text-sm text-gray-700 data-focus:bg-gray-100 data-focus:outline-hidden"
-                  >
-                    Your Profile
-                  </a>
-                </HeadlessMenu.Item>
-                <HeadlessMenu.Item>
-                  <a
-                    href="#"
-                    className="block px-4 py-2 text-sm text-gray-700 data-focus:bg-gray-100 data-focus:outline-hidden"
-                  >
-                    Settings
-                  </a>
-                </HeadlessMenu.Item>
-                <HeadlessMenu.Item>
-                  <button
-                    onClick={handleLogout}
-                    className="block w-full text-left px-4 py-2 text-sm text-gray-700 data-focus:bg-gray-100 data-focus:outline-hidden"
-                  >
-                    Sign out
-                  </button>
-                </HeadlessMenu.Item>
+                {user ? (
+                  <>
+                    <HeadlessMenu.Item>
+                      <a
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          navigateToProfile();
+                        }}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 data-focus:outline-hidden"
+                      >
+                        Your Profile
+                      </a>
+                    </HeadlessMenu.Item>
+                    <HeadlessMenu.Item>
+                      <a
+                        href="#"
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 data-focus:outline-hidden"
+                      >
+                        Settings
+                      </a>
+                    </HeadlessMenu.Item>
+                    <HeadlessMenu.Item>
+                      <button
+                        onClick={handleLogout}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 data-focus:outline-hidden"
+                      >
+                        Sign out
+                      </button>
+                    </HeadlessMenu.Item>
+                  </>
+                ) : (
+                  <HeadlessMenu.Item>
+                    <a
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        // Navigate to login section on the home page
+                        if (window.location.pathname !== '/') {
+                          router.push('/#login');
+                        } else {
+                          const loginElement = document.getElementById('login');
+                          if (loginElement) {
+                            loginElement.scrollIntoView({
+                              behavior: 'smooth',
+                              block: 'start'
+                            });
+                          } else {
+                            // If element not found, try to find the login section by class
+                            const loginSection = document.querySelector('.login-section');
+                            if (loginSection) {
+                              loginSection.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start'
+                              });
+                            }
+                          }
+                        }
+                      }}
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 data-focus:outline-hidden"
+                    >
+                      Log in
+                    </a>
+                  </HeadlessMenu.Item>
+                )}
               </HeadlessMenu.Items>
             </HeadlessMenu>
           </div>
