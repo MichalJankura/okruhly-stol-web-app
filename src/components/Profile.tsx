@@ -93,6 +93,7 @@ const Profile = () => {
       }, 3000);
       return () => clearTimeout(timer);
     }
+    return undefined; // Explicitly return undefined when notification is null
   }, [notification]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
