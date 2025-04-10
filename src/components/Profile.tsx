@@ -1,5 +1,4 @@
 import React, { useState, useReducer, useEffect } from "react";
-import { useForm } from "react-hook-form";
 import { FaEye, FaEyeSlash, FaCamera } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -39,12 +38,6 @@ function preferencesReducer(state: PreferencesState, action: PreferencesAction):
   }
 }
 
-interface FormData {
-  fullName: string;
-  email: string;
-  password: string;
-}
-
 interface User {
   firstName?: string;
   lastName?: string;
@@ -58,13 +51,15 @@ const Profile = () => {
   const [preferences, dispatch] = useReducer(preferencesReducer, initialState);
   const [user, setUser] = useState<User | null>(null);
   const [isClient, setIsClient] = useState(false);
-
-  const { register, handleSubmit, formState: { errors },setValue } = useForm<FormData>({
-    defaultValues: {
-      fullName: "",
-      email: "",
-      password: ""
-    }
+  const [formData, setFormData] = useState({
+    fullName: "",
+    email: "",
+    password: ""
+  });
+  const [errors, setErrors] = useState({
+    fullName: "",
+    email: "",
+    password: ""
   });
 
   // Use useEffect to set isClient to true after component mounts
@@ -84,10 +79,13 @@ const Profile = () => {
       setUser(parsedUser);
       
       // Set form values from user data
-      setValue('fullName', `${parsedUser.firstName || ''} ${parsedUser.lastName || ''}`.trim());
-      setValue('email', parsedUser.email || '');
+      setFormData({
+        fullName: `${parsedUser.firstName || ''} ${parsedUser.lastName || ''}`.trim(),
+        email: parsedUser.email || '',
+        password: ''
+      });
     }
-  }, [setValue, isClient]);
+  }, [isClient]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -104,9 +102,51 @@ const Profile = () => {
     }
   };
 
-  const onSubmit = (data: FormData) => {
+  const validateForm = () => {
+    const newErrors = {
+      fullName: "",
+      email: "",
+      password: ""
+    };
+    let isValid = true;
+
+    if (!formData.fullName) {
+      newErrors.fullName = "Meno je povinné";
+      isValid = false;
+    } else if (formData.fullName.length < 2) {
+      newErrors.fullName = "Meno musí mať aspoň 2 znaky";
+      isValid = false;
+    }
+
+    if (!formData.email) {
+      newErrors.email = "E-mail je povinný";
+      isValid = false;
+    } else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(formData.email)) {
+      newErrors.email = "Neplatná e-mailová adresa";
+      isValid = false;
+    }
+
+    if (formData.password && formData.password.length < 8) {
+      newErrors.password = "Heslo musí mať aspoň 8 znakov";
+      isValid = false;
+    } else if (formData.password && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(formData.password)) {
+      newErrors.password = "Heslo musí obsahovať veľké písmeno, malé písmeno, číslo a špeciálny znak";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
     // Split full name into first and last name
-    const nameParts = data.fullName.split(' ');
+    const nameParts = formData.fullName.split(' ');
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
     
@@ -115,14 +155,12 @@ const Profile = () => {
       ...user,
       firstName,
       lastName,
-      email: data.email
+      email: formData.email
     };
     
     // Only update password if provided
-    if (data.password) {
-      // In a real app, you would hash the password and send it to the server
-      // For this demo, we'll just store it in localStorage (not recommended for real apps)
-      updatedUser.password = data.password;
+    if (formData.password) {
+      updatedUser.password = formData.password;
     }
     
     // Save to localStorage
@@ -133,7 +171,15 @@ const Profile = () => {
     
     // Show success message
     toast.success("Profil bol úspešne aktualizovaný!");
-    console.log({ ...data, preferences });
+    console.log({ formData, preferences });
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   return (
@@ -142,7 +188,7 @@ const Profile = () => {
         <div className="max-w-4xl mx-auto bg-card rounded-lg shadow-lg p-6">
           <h1 className="text-heading font-heading text-foreground mb-8">Nastavenia profilu</h1>
 
-          <form onSubmit={handleSubmit(onSubmit)}>
+          <form onSubmit={handleSubmit}>
             <div className="mb-8">
               <div className="flex flex-col items-center mb-6">
                 <div className="relative">
@@ -169,10 +215,12 @@ const Profile = () => {
                     Celé meno
                   </label>
                   <input
-                    {...register("fullName", { required: "Meno je povinné", minLength: { value: 2, message: "Meno musí mať aspoň 2 znaky" } })}
+                    name="fullName"
+                    value={formData.fullName}
+                    onChange={handleInputChange}
                     className="w-full p-3 border rounded-md bg-background"
                   />
-                  {errors.fullName && <p className="text-destructive mt-1">{errors.fullName.message}</p>}
+                  {errors.fullName && <p className="text-destructive mt-1">{errors.fullName}</p>}
                 </div>
 
                 <div>
@@ -180,17 +228,13 @@ const Profile = () => {
                     E-mailová adresa
                   </label>
                   <input
-                    {...register("email", {
-                      required: "E-mail je povinný",
-                      pattern: {
-                        value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                        message: "Neplatná e-mailová adresa"
-                      }
-                    })}
+                    name="email"
                     type="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
                     className="w-full p-3 border rounded-md bg-background"
                   />
-                  {errors.email && <p className="text-destructive mt-1">{errors.email.message}</p>}
+                  {errors.email && <p className="text-destructive mt-1">{errors.email}</p>}
                 </div>
 
                 <div>
@@ -199,15 +243,10 @@ const Profile = () => {
                   </label>
                   <div className="relative">
                     <input
-                      {...register("password", {
-                        required: false,
-                        minLength: { value: 8, message: "Heslo musí mať aspoň 8 znakov" },
-                        pattern: {
-                          value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
-                          message: "Heslo musí obsahovať veľké písmeno, malé písmeno, číslo a špeciálny znak"
-                        }
-                      })}
+                      name="password"
                       type={showPassword ? "text" : "password"}
+                      value={formData.password}
+                      onChange={handleInputChange}
                       className="w-full p-3 border rounded-md bg-background"
                       placeholder="Ponechať prázdne pre zachovanie aktuálneho hesla"
                     />
@@ -219,7 +258,7 @@ const Profile = () => {
                       {showPassword ? <FaEyeSlash /> : <FaEye />}
                     </button>
                   </div>
-                  {errors.password && <p className="text-destructive mt-1">{errors.password.message}</p>}
+                  {errors.password && <p className="text-destructive mt-1">{errors.password}</p>}
                 </div>
               </div>
             </div>
