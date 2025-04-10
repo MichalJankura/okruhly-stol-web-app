@@ -30,6 +30,7 @@ const BlogDetail = () => {
   const [post, setPost] = useState<StrapiPost | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [allPosts, setAllPosts] = useState<StrapiPost[]>([]);
 
   useEffect(() => {
     const fetchPost = async () => {
@@ -57,8 +58,12 @@ const BlogDetail = () => {
           throw new Error('No data received from server');
         }
 
+        // Uložíme všetky príspevky pre navigáciu
+        const posts = data.data;
+        setAllPosts(posts);
+
         // Nájdeme článok s daným ID
-        const foundPost = data.data.find((p: StrapiPost) => p.id === Number(id));
+        const foundPost = posts.find((p: StrapiPost) => p.id === Number(id));
         if (!foundPost) {
           throw new Error('Článok nebol nájdený');
         }
@@ -74,6 +79,25 @@ const BlogDetail = () => {
 
     fetchPost();
   }, [id]);
+
+  // Funkcie na získanie ID predchádzajúceho a nasledujúceho príspevku
+  const getPrevPostId = () => {
+    if (!post || allPosts.length === 0) return undefined;
+    
+    const currentIndex = allPosts.findIndex(p => p.id === post.id);
+    if (currentIndex <= 0) return undefined;
+    
+    return allPosts[currentIndex - 1]?.id;
+  };
+
+  const getNextPostId = () => {
+    if (!post || allPosts.length === 0) return undefined;
+    
+    const currentIndex = allPosts.findIndex(p => p.id === post.id);
+    if (currentIndex === -1 || currentIndex >= allPosts.length - 1) return undefined;
+    
+    return allPosts[currentIndex + 1]?.id;
+  };
 
   if (loading) {
     return (
@@ -130,6 +154,9 @@ const BlogDetail = () => {
     return 'https://via.placeholder.com/800x400?text=Bez+obrázku';
   };
 
+  const prevPostId = getPrevPostId();
+  const nextPostId = getNextPostId();
+
   return (
     <div className="min-h-screen bg-gray-100 py-12">
       <div className="max-w-3xl mx-auto px-4">
@@ -140,6 +167,9 @@ const BlogDetail = () => {
           date={post.datum || new Date().toLocaleDateString()}
           content={post.clanok}
           image={getImageUrl(post)}
+          postId={post.id}
+          prevPostId={prevPostId}
+          nextPostId={nextPostId}
         />
       </div>
     </div>
