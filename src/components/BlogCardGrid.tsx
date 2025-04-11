@@ -42,6 +42,7 @@ const BlogCardGrid = () => {
   const eventsPerPage = 8;
   const [selectedEvent, setSelectedEvent] = useState<BlogArticle | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [filteredArticles, setFilteredArticles] = useState<BlogArticle[]>([]);
 
   const toggleFavorite = useCallback((eventId: number) => {
     setFavorites(prev => 
@@ -143,6 +144,9 @@ const BlogCardGrid = () => {
 
   // Update displayed articles when filters change
   useEffect(() => {
+    // Reset to the first page whenever filters change
+    setCurrentPage(1);
+
     const filtered = allArticles.filter(event => {
       const matchesCategory = category === "Všetky kategórie" || event.category.toLowerCase() === category.toLowerCase();
       const matchesLocation = selectedLocation === "all" || event.location === selectedLocation;
@@ -160,10 +164,21 @@ const BlogCardGrid = () => {
       return matchesCategory && matchesLocation && matchesSearch && matchesDateRange;
     });
 
-    const startIndex = (currentPage - 1) * eventsPerPage;
+    // Update the filtered articles state
+    setFilteredArticles(filtered);
+
+    // Update the displayed articles based on the new current page
+    const startIndex = (1 - 1) * eventsPerPage; // Use 1 for the first page
     const endIndex = startIndex + eventsPerPage;
     setBlogArticles(filtered.slice(startIndex, endIndex));
-  }, [category, allArticles, selectedLocation, searchQuery, dateRange, currentPage]);
+  }, [category, allArticles, selectedLocation, searchQuery, dateRange]);
+
+  // Update the displayed articles when currentPage changes
+  useEffect(() => {
+    const startIndex = (currentPage - 1) * eventsPerPage;
+    const endIndex = startIndex + eventsPerPage;
+    setBlogArticles(filteredArticles.slice(startIndex, endIndex));
+  }, [currentPage, filteredArticles]);
 
   const filteredEvents = useMemo(() => {
     return blogArticles;
@@ -171,7 +186,14 @@ const BlogCardGrid = () => {
 
   // Handle page change
   const handlePageChange = (pageNumber: number) => {
-    setCurrentPage(pageNumber);
+    const totalPages = Math.ceil(filteredArticles.length / eventsPerPage);
+    if (pageNumber < 1) {
+      setCurrentPage(1);
+    } else if (pageNumber > totalPages) {
+      setCurrentPage(totalPages);
+    } else {
+      setCurrentPage(pageNumber);
+    }
   };
 
   const handleViewDetails = (event: BlogArticle) => {
@@ -428,7 +450,7 @@ const BlogCardGrid = () => {
           </div>
 
           {/* Pagination Controls */}
-          {filteredEvents.length > 0 && (
+          {filteredArticles.length > 0 && (
             <div className="flex justify-center gap-2 mt-8">
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
@@ -438,11 +460,11 @@ const BlogCardGrid = () => {
                 Predchádzajúca
               </button>
               <span className="px-4 py-2">
-                Strana {currentPage} z {Math.ceil(allArticles.length / eventsPerPage)}
+                Strana {currentPage} z {Math.ceil(filteredArticles.length / eventsPerPage)}
               </span>
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
-                disabled={currentPage >= Math.ceil(allArticles.length / eventsPerPage)}
+                disabled={currentPage >= Math.ceil(filteredArticles.length / eventsPerPage)}
                 className="px-4 py-2 bg-[#0D6EFD] text-white rounded-lg disabled:opacity-50"
               >
                 Ďalšia
