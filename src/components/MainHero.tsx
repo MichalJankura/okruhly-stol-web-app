@@ -45,9 +45,9 @@ const MainHero = () => {
   };
 
   const stats = [
-    { id: 1, number: "1000+", label: "Total Members", icon: <FaUsers /> },
-    { id: 2, number: "15", label: "Years Active", icon: <FaClock /> },
-    { id: 3, number: "500+", label: "Events Hosted", icon: <FaCalendarAlt /> }
+    { id: 1, number: "100+", label: "Počet členov", icon: <FaUsers /> },
+    { id: 2, number: "15", label: "Rok existencie", icon: <FaClock /> },
+    { id: 3, number: "100+", label: "Počet hostovaných udalostí", icon: <FaCalendarAlt /> }
   ];
 
   return (
