@@ -471,6 +471,151 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
+// Update user preferences endpoint (JSONB column on users table)
+app.put('/api/user/preferences', async (req, res) => {
+  try {
+    const { email, preferences } = req.body;
+    if (!email || !preferences) {
+      return res.status(400).json({ error: 'Email and preferences are required' });
+    }
+    // Update preferences in the users table
+    const result = await pool.query(
+      'UPDATE users SET preferences = $1 WHERE email = $2 RETURNING user_id, email, preferences',
+      [preferences, email]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({
+      message: 'Preferences updated successfully',
+      user: {
+        id: result.rows[0].user_id,
+        email: result.rows[0].email,
+        preferences: result.rows[0].preferences
+      }
+    });
+  } catch (err) {
+    console.error('Error updating preferences:', err);
+    res.status(500).json({ error: 'Failed to update preferences' });
+  }
+});
+
+// Save user event category preferences (relational, upsert per category)
+app.post('/api/preferences', async (req, res) => {
+  try {
+    const { user_id, eventCategories } = req.body;
+    if (!user_id || !Array.isArray(eventCategories)) {
+      return res.status(400).json({ error: 'user_id and eventCategories are required' });
+    }
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      for (const category of eventCategories) {
+        await client.query(
+          `INSERT INTO user_preferences (user_id, event_type, weight)
+           VALUES ($1, $2, 1.0)
+           ON CONFLICT (user_id, event_type) DO UPDATE SET weight = 1.0;`,
+          [user_id, category]
+        );
+      }
+      await client.query('COMMIT');
+      res.json({ message: 'Preferences updated' });
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
+    }
+  } catch (err) {
+    console.error('Error saving preferences:', err);
+    res.status(500).json({ error: 'Failed to save preferences' });
+  }
+});
+
+// Log user event interactions (like/dislike)
+app.post('/api/interactions', async (req, res) => {
+  try {
+    const { user_id, event_id, action_type } = req.body;
+    if (!user_id || !event_id || !action_type) {
+      return res.status(400).json({ error: 'user_id, event_id, and action_type are required' });
+    }
+    await pool.query(
+      `INSERT INTO user_event_interactions (user_id, event_id, action_type)
+       VALUES ($1, $2, $3)`,
+      [user_id, event_id, action_type]
+    );
+    res.json({ message: 'Interaction logged' });
+  } catch (err) {
+    console.error('Error logging interaction:', err);
+    res.status(500).json({ error: 'Failed to log interaction' });
+  }
+});
+
+// Adjust user preferences weight based on like/dislike
+app.post('/api/update-weight', async (req, res) => {
+  try {
+    const { user_id, event_type, liked } = req.body;
+    if (!user_id || !event_type || typeof liked !== 'boolean') {
+      return res.status(400).json({ error: 'user_id, event_type, and liked are required' });
+    }
+    const adjustment = liked ? 0.2 : -0.2;
+    await pool.query(
+      `UPDATE user_preferences
+       SET weight = GREATEST(0.0, weight + $1)
+       WHERE user_id = $2 AND event_type = $3`,
+      [adjustment, user_id, event_type]
+    );
+    res.json({ message: 'Preference weight updated' });
+  } catch (err) {
+    console.error('Error updating preference weight:', err);
+    res.status(500).json({ error: 'Failed to update preference weight' });
+  }
+});
+
+// Fetch recommended events based on preferences
+app.get('/api/recommendations', async (req, res) => {
+  try {
+    const { user_id, event_type, liked } = req.body;
+    if (!user_id || !event_type || typeof liked !== 'boolean') {
+      return res.status(400).json({ error: 'user_id, event_type, and liked are required' });
+    }
+    const adjustment = liked ? 0.2 : -0.2;
+    await pool.query(
+      `UPDATE user_preferences
+       SET weight = GREATEST(0.0, weight + $1)
+       WHERE user_id = $2 AND event_type = $3`,
+      [adjustment, user_id, event_type]
+    );
+    res.json({ message: 'Preference weight updated' });
+  } catch (err) {
+    console.error('Error updating preference weight:', err);
+    res.status(500).json({ error: 'Failed to update preference weight' });
+  }
+});
+
+app.get('/api/recommendations', async (req, res) => {
+  try {
+    const user_id = req.query.user_id;
+    if (!user_id) {
+      return res.status(400).json({ error: 'user_id is required' });
+    }
+    const result = await pool.query(
+      `SELECT e.*
+       FROM events e
+       JOIN user_preferences up ON e.event_type = up.event_type
+       WHERE up.user_id = $1
+       ORDER BY up.weight DESC
+       LIMIT 10`,
+      [user_id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error fetching recommendations:', err);
+    res.status(500).json({ error: 'Failed to fetch recommendations' });
+  }
+});
+
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
+
