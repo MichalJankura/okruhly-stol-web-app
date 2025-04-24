@@ -500,26 +500,49 @@ app.put('/api/user/preferences', async (req, res) => {
   }
 });
 
-// Save user event category preferences (relational, upsert per category)
+// Save user preferences
 app.post('/api/preferences', async (req, res) => {
   try {
-    const { user_id, eventCategories } = req.body;
-    if (!user_id || !Array.isArray(eventCategories)) {
-      return res.status(400).json({ error: 'user_id and eventCategories are required' });
+    const { user_id, eventCategories, preferredTime, preferredDistance, budgetRange, eventSize, additionalNotes } = req.body;
+    
+    if (!user_id) {
+      return res.status(400).json({ error: 'user_id is required' });
     }
+
+    // Start a transaction
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      for (const category of eventCategories) {
-        await client.query(
-          `INSERT INTO user_preferences (user_id, event_type, weight)
-           VALUES ($1, $2, 1.0)
-           ON CONFLICT (user_id, event_type) DO UPDATE SET weight = 1.0;`,
-          [user_id, category]
-        );
+
+      // First, clear existing preferences for this user
+      await client.query('DELETE FROM user_preferences WHERE user_id = $1', [user_id]);
+
+      // Insert new preferences
+      if (eventCategories && Array.isArray(eventCategories)) {
+        for (const category of eventCategories) {
+          await client.query(
+            'INSERT INTO user_preferences (user_id, event_type, weight) VALUES ($1, $2, $3)',
+            [user_id, category, 1.0]
+          );
+        }
       }
+
+      // Update user preferences in the users table
+      await client.query(
+        `UPDATE users 
+         SET preferences = $1 
+         WHERE user_id = $2`,
+        [{
+          preferredTime,
+          preferredDistance,
+          budgetRange,
+          eventSize,
+          additionalNotes
+        }, user_id]
+      );
+
       await client.query('COMMIT');
-      res.json({ message: 'Preferences updated' });
+      res.json({ message: 'Preferences saved successfully' });
     } catch (err) {
       await client.query('ROLLBACK');
       throw err;
@@ -529,6 +552,39 @@ app.post('/api/preferences', async (req, res) => {
   } catch (err) {
     console.error('Error saving preferences:', err);
     res.status(500).json({ error: 'Failed to save preferences' });
+  }
+});
+
+// Get user preferences
+app.get('/api/preferences', async (req, res) => {
+  try {
+    const { user_id } = req.query;
+    
+    if (!user_id) {
+      return res.status(400).json({ error: 'user_id is required' });
+    }
+
+    // Get event categories
+    const categoriesResult = await pool.query(
+      'SELECT event_type FROM user_preferences WHERE user_id = $1',
+      [user_id]
+    );
+
+    // Get user preferences
+    const userResult = await pool.query(
+      'SELECT preferences FROM users WHERE user_id = $1',
+      [user_id]
+    );
+
+    const preferences = {
+      eventCategories: categoriesResult.rows.map(row => row.event_type),
+      ...(userResult.rows[0]?.preferences || {})
+    };
+
+    res.json(preferences);
+  } catch (err) {
+    console.error('Error fetching preferences:', err);
+    res.status(500).json({ error: 'Failed to fetch preferences' });
   }
 });
 
