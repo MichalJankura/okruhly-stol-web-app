@@ -688,7 +688,7 @@ app.get('/api/recommendations', async (req, res) => {
 
     // Get events with their types
     const eventsResult = await pool.query(
-      `SELECT e.*, e.event_type as category
+      `SELECT e.*, e.event_type as category, e.image_url as image
        FROM events e
        WHERE e.event_start_date >= CURRENT_DATE
        ORDER BY e.event_start_date ASC`
