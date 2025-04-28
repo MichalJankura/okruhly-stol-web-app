@@ -631,40 +631,71 @@ app.post('/api/update-weight', async (req, res) => {
 // Fetch recommended events based on preferences
 app.get('/api/recommendations', async (req, res) => {
   try {
-    const { user_id, event_type, liked } = req.body;
-    if (!user_id || !event_type || typeof liked !== 'boolean') {
-      return res.status(400).json({ error: 'user_id, event_type, and liked are required' });
-    }
-    const adjustment = liked ? 0.2 : -0.2;
-    await pool.query(
-      `UPDATE user_preferences
-       SET weight = GREATEST(0.0, weight + $1)
-       WHERE user_id = $2 AND event_type = $3`,
-      [adjustment, user_id, event_type]
-    );
-    res.json({ message: 'Preference weight updated' });
-  } catch (err) {
-    console.error('Error updating preference weight:', err);
-    res.status(500).json({ error: 'Failed to update preference weight' });
-  }
-});
-
-app.get('/api/recommendations', async (req, res) => {
-  try {
     const user_id = req.query.user_id;
     if (!user_id) {
       return res.status(400).json({ error: 'user_id is required' });
     }
-    const result = await pool.query(
-      `SELECT e.*
-       FROM events e
-       JOIN user_preferences up ON e.event_type = up.event_type
-       WHERE up.user_id = $1
-       ORDER BY up.weight DESC
-       LIMIT 10`,
+
+    // Get user preferences and weights
+    const preferencesResult = await pool.query(
+      `SELECT up.event_type, up.weight, u.preferences
+       FROM user_preferences up
+       JOIN users u ON up.user_id = u.user_id
+       WHERE up.user_id = $1`,
       [user_id]
     );
-    res.json(result.rows);
+
+    // Get user's interaction history
+    const interactionsResult = await pool.query(
+      `SELECT event_id, action_type, COUNT(*) as count
+       FROM user_event_interactions
+       WHERE user_id = $1
+       GROUP BY event_id, action_type`,
+      [user_id]
+    );
+
+    // Create a map of event types to weights
+    const eventTypeWeights = new Map();
+    preferencesResult.rows.forEach(row => {
+      eventTypeWeights.set(row.event_type, row.weight);
+    });
+
+    // Create a map of event IDs to interaction counts
+    const eventInteractions = new Map();
+    interactionsResult.rows.forEach(row => {
+      const score = row.action_type === 'like' ? 1 : -1;
+      eventInteractions.set(row.event_id, (eventInteractions.get(row.event_id) || 0) + (score * row.count));
+    });
+
+    // Get events with their types
+    const eventsResult = await pool.query(
+      `SELECT e.*, e.event_type as category
+       FROM events e
+       WHERE e.event_start_date >= CURRENT_DATE
+       ORDER BY e.event_start_date ASC`
+    );
+
+    // Score and sort events
+    const scoredEvents = eventsResult.rows.map(event => {
+      const typeWeight = eventTypeWeights.get(event.event_type) || 0;
+      const interactionScore = eventInteractions.get(event.id) || 0;
+      const timeScore = new Date(event.event_start_date).getTime() - Date.now();
+      
+      // Combine scores (you can adjust these weights)
+      const totalScore = 
+        (typeWeight * 0.5) + 
+        (interactionScore * 0.3) + 
+        (timeScore * 0.2);
+
+      return { ...event, score: totalScore };
+    });
+
+    // Sort by score and take top 10
+    const recommendedEvents = scoredEvents
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 10);
+
+    res.json(recommendedEvents);
   } catch (err) {
     console.error('Error fetching recommendations:', err);
     res.status(500).json({ error: 'Failed to fetch recommendations' });
