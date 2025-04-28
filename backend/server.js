@@ -665,7 +665,9 @@ app.get('/api/recommendations', async (req, res) => {
       console.log('No preferences found for user');
       // No preferences yet → Return random events
       const randomEvents = await pool.query(
-        `SELECT * FROM events ORDER BY RANDOM() LIMIT 10`
+        `SELECT e.*, e.event_type as category, e.image_url as image
+         FROM events e
+         ORDER BY RANDOM() LIMIT 10`
       );
       return res.json(randomEvents.rows);
     }
@@ -678,6 +680,8 @@ app.get('/api/recommendations', async (req, res) => {
 
     const scoredEvents = await pool.query(`
       SELECT e.*, 
+        e.event_type as category,
+        e.image_url as image,
         COALESCE((
           SELECT weight FROM user_preferences up
           WHERE up.event_type = e.event_type AND up.user_id = $1
