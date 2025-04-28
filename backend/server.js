@@ -653,79 +653,43 @@ app.get('/api/recommendations', async (req, res) => {
 
     // Get user preferences and weights
     const preferencesResult = await pool.query(
-      `SELECT up.event_type, up.weight, u.preferences
-       FROM user_preferences up
-       JOIN users u ON up.user_id = u.user_id
-       WHERE up.user_id = $1`,
+      `SELECT event_type, weight
+       FROM user_preferences
+       WHERE user_id = $1`,
       [user_id]
     );
 
-    console.log('User preferences:', preferencesResult.rows);
+    const preferences = preferencesResult.rows;
 
-    // Get user's interaction history
-    const interactionsResult = await pool.query(
-      `SELECT event_id, action_type, COUNT(*) as count
-       FROM user_event_interactions
-       WHERE user_id = $1
-       GROUP BY event_id, action_type`,
-      [user_id]
-    );
+    if (preferences.length === 0) {
+      console.log('No preferences found for user');
+      // No preferences yet → Return random events
+      const randomEvents = await pool.query(
+        `SELECT * FROM events ORDER BY RANDOM() LIMIT 10`
+      );
+      return res.json(randomEvents.rows);
+    }
 
-    console.log('User interactions:', interactionsResult.rows);
-
-    // Create a map of event types to weights
-    const eventTypeWeights = new Map();
-    preferencesResult.rows.forEach(row => {
-      eventTypeWeights.set(row.event_type, row.weight);
+    // Build dynamic SQL to score events
+    const preferenceMap = {};
+    preferences.forEach(pref => {
+      preferenceMap[pref.event_type] = pref.weight;
     });
 
-    // Create a map of event IDs to interaction counts
-    const eventInteractions = new Map();
-    interactionsResult.rows.forEach(row => {
-      const score = row.action_type === 'like' ? 1 : -1;
-      eventInteractions.set(row.event_id, (eventInteractions.get(row.event_id) || 0) + (score * row.count));
-    });
+    const scoredEvents = await pool.query(`
+      SELECT e.*, 
+        COALESCE((
+          SELECT weight FROM user_preferences up
+          WHERE up.event_type = e.event_type AND up.user_id = $1
+        ), 0) AS score
+      FROM events e
+      ORDER BY score DESC, RANDOM()
+      LIMIT 10
+    `, [user_id]);
 
-    // Get events with their types
-    const eventsResult = await pool.query(
-      `SELECT e.*, e.event_type as category, e.image_url as image
-       FROM events e
-       WHERE e.event_start_date >= CURRENT_DATE
-       ORDER BY e.event_start_date ASC`
-    );
+    console.log(`Fetched ${scoredEvents.rows.length} recommended events`);
+    res.json(scoredEvents.rows);
 
-    console.log('Total events found:', eventsResult.rows.length);
-
-    // Score and sort events
-    const scoredEvents = eventsResult.rows.map(event => {
-      const typeWeight = eventTypeWeights.get(event.event_type) || 0;
-      const interactionScore = eventInteractions.get(event.id) || 0;
-      const timeScore = new Date(event.event_start_date).getTime() - Date.now();
-      
-      // Combine scores (you can adjust these weights)
-      const totalScore = 
-        (typeWeight * 0.5) + 
-        (interactionScore * 0.3) + 
-        (timeScore * 0.2);
-
-      console.log(`Event ${event.id} scores:`, {
-        typeWeight,
-        interactionScore,
-        timeScore,
-        totalScore
-      });
-
-      return { ...event, score: totalScore };
-    });
-
-    // Sort by score and take top 10
-    const recommendedEvents = scoredEvents
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 10);
-
-    console.log('Final recommended events:', recommendedEvents.map(e => ({ id: e.id, score: e.score })));
-
-    res.json(recommendedEvents);
   } catch (err) {
     console.error('Error fetching recommendations:', err);
     res.status(500).json({ error: 'Failed to fetch recommendations' });
