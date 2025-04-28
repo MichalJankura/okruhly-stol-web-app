@@ -595,11 +595,17 @@ app.post('/api/interactions', async (req, res) => {
     if (!user_id || !event_id || !action_type) {
       return res.status(400).json({ error: 'user_id, event_id, and action_type are required' });
     }
+
+    console.log('Logging interaction:', { user_id, event_id, action_type });
+
     await pool.query(
       `INSERT INTO user_event_interactions (user_id, event_id, action_type)
        VALUES ($1, $2, $3)`,
       [user_id, event_id, action_type]
     );
+
+    console.log('Interaction logged successfully');
+
     res.json({ message: 'Interaction logged' });
   } catch (err) {
     console.error('Error logging interaction:', err);
@@ -614,14 +620,21 @@ app.post('/api/update-weight', async (req, res) => {
     if (!user_id || !event_type || typeof liked !== 'boolean') {
       return res.status(400).json({ error: 'user_id, event_type, and liked are required' });
     }
+
+    console.log('Updating preference weight:', { user_id, event_type, liked });
+
     const adjustment = liked ? 0.2 : -0.2;
-    await pool.query(
+    const result = await pool.query(
       `UPDATE user_preferences
        SET weight = GREATEST(0.0, weight + $1)
-       WHERE user_id = $2 AND event_type = $3`,
+       WHERE user_id = $2 AND event_type = $3
+       RETURNING weight`,
       [adjustment, user_id, event_type]
     );
-    res.json({ message: 'Preference weight updated' });
+
+    console.log('Weight update result:', result.rows[0]);
+
+    res.json({ message: 'Preference weight updated', newWeight: result.rows[0]?.weight });
   } catch (err) {
     console.error('Error updating preference weight:', err);
     res.status(500).json({ error: 'Failed to update preference weight' });
@@ -636,6 +649,8 @@ app.get('/api/recommendations', async (req, res) => {
       return res.status(400).json({ error: 'user_id is required' });
     }
 
+    console.log('Fetching recommendations for user:', user_id);
+
     // Get user preferences and weights
     const preferencesResult = await pool.query(
       `SELECT up.event_type, up.weight, u.preferences
@@ -645,6 +660,8 @@ app.get('/api/recommendations', async (req, res) => {
       [user_id]
     );
 
+    console.log('User preferences:', preferencesResult.rows);
+
     // Get user's interaction history
     const interactionsResult = await pool.query(
       `SELECT event_id, action_type, COUNT(*) as count
@@ -653,6 +670,8 @@ app.get('/api/recommendations', async (req, res) => {
        GROUP BY event_id, action_type`,
       [user_id]
     );
+
+    console.log('User interactions:', interactionsResult.rows);
 
     // Create a map of event types to weights
     const eventTypeWeights = new Map();
@@ -675,6 +694,8 @@ app.get('/api/recommendations', async (req, res) => {
        ORDER BY e.event_start_date ASC`
     );
 
+    console.log('Total events found:', eventsResult.rows.length);
+
     // Score and sort events
     const scoredEvents = eventsResult.rows.map(event => {
       const typeWeight = eventTypeWeights.get(event.event_type) || 0;
@@ -687,6 +708,13 @@ app.get('/api/recommendations', async (req, res) => {
         (interactionScore * 0.3) + 
         (timeScore * 0.2);
 
+      console.log(`Event ${event.id} scores:`, {
+        typeWeight,
+        interactionScore,
+        timeScore,
+        totalScore
+      });
+
       return { ...event, score: totalScore };
     });
 
@@ -694,6 +722,8 @@ app.get('/api/recommendations', async (req, res) => {
     const recommendedEvents = scoredEvents
       .sort((a, b) => b.score - a.score)
       .slice(0, 10);
+
+    console.log('Final recommended events:', recommendedEvents.map(e => ({ id: e.id, score: e.score })));
 
     res.json(recommendedEvents);
   } catch (err) {
