@@ -642,33 +642,25 @@ app.post('/api/update-weight', async (req, res) => {
   }
 });
 
+// Replace LightFM or old backend URL with new local server
+const RECOMMENDATION_API = "https://okruhly-stol-web-app-1.onrender.com/recommend";
+
 // Fetch recommended events based on preferences
 app.get('/api/recommendations', async (req, res) => {
+  const userId = req.query.user_id;
+
   try {
-    const { user_id } = req.query;
+    const response = await fetch(`${RECOMMENDATION_API}?user_id=${userId}`);
+    const recommendedIds = await response.json();
 
-    if (!user_id) {
-      return res.status(400).json({ error: 'Missing user_id' });
-    }
-
-    console.log('Fetching ML recommendations for user:', user_id);
-
-    const mlResponse = await fetch(`http://localhost:5000/recommend?user_id=${user_id}`);
-    const recommendedIds = await mlResponse.json();
-
-    if (!recommendedIds.length) {
-      console.log('No ML recommendations found, using fallback random events');
-      const fallback = await pool.query('SELECT * FROM events ORDER BY RANDOM() LIMIT 10');
-      return res.json(fallback.rows);
-    }
-
+    // Get full event details by ID
     const placeholders = recommendedIds.map((_, idx) => `$${idx + 1}`).join(',');
     const events = await pool.query(`SELECT * FROM events WHERE id IN (${placeholders})`, recommendedIds);
 
     res.json(events.rows);
   } catch (error) {
-    console.error('Recommendation system error:', error);
-    res.status(500).json({ error: 'Recommendation system is unavailable' });
+    console.error("Recommendation API failed:", error);
+    res.status(500).json({ error: "Recommendation failed." });
   }
 });
 
