@@ -4,6 +4,7 @@ const { Pool } = require('pg');
 const cors = require('cors');
 const path = require('path');
 const bcrypt = require('bcrypt');
+const fetch = require('node-fetch');
 require('dotenv').config({ path: path.join(__dirname, 'database.env') });
 
 const app = express();
@@ -644,59 +645,30 @@ app.post('/api/update-weight', async (req, res) => {
 // Fetch recommended events based on preferences
 app.get('/api/recommendations', async (req, res) => {
   try {
-    const user_id = req.query.user_id;
+    const { user_id } = req.query;
+
     if (!user_id) {
-      return res.status(400).json({ error: 'user_id is required' });
+      return res.status(400).json({ error: 'Missing user_id' });
     }
 
-    console.log('Fetching recommendations for user:', user_id);
+    console.log('Fetching ML recommendations for user:', user_id);
 
-    // Get user preferences and weights
-    const preferencesResult = await pool.query(
-      `SELECT event_type, weight
-       FROM user_preferences
-       WHERE user_id = $1`,
-      [user_id]
-    );
+    const mlResponse = await fetch(`http://localhost:5000/recommend?user_id=${user_id}`);
+    const recommendedIds = await mlResponse.json();
 
-    const preferences = preferencesResult.rows;
-
-    if (preferences.length === 0) {
-      console.log('No preferences found for user');
-      // No preferences yet → Return random events
-      const randomEvents = await pool.query(
-        `SELECT e.*, e.event_type as category, e.image_url as image
-         FROM events e
-         ORDER BY RANDOM() LIMIT 10`
-      );
-      return res.json(randomEvents.rows);
+    if (!recommendedIds.length) {
+      console.log('No ML recommendations found, using fallback random events');
+      const fallback = await pool.query('SELECT * FROM events ORDER BY RANDOM() LIMIT 10');
+      return res.json(fallback.rows);
     }
 
-    // Build dynamic SQL to score events
-    const preferenceMap = {};
-    preferences.forEach(pref => {
-      preferenceMap[pref.event_type] = pref.weight;
-    });
+    const placeholders = recommendedIds.map((_, idx) => `$${idx + 1}`).join(',');
+    const events = await pool.query(`SELECT * FROM events WHERE id IN (${placeholders})`, recommendedIds);
 
-    const scoredEvents = await pool.query(`
-      SELECT e.*, 
-        e.event_type as category,
-        e.image_url as image,
-        COALESCE((
-          SELECT weight FROM user_preferences up
-          WHERE up.event_type = e.event_type AND up.user_id = $1
-        ), 0) AS score
-      FROM events e
-      ORDER BY score DESC, RANDOM()
-      LIMIT 10
-    `, [user_id]);
-
-    console.log(`Fetched ${scoredEvents.rows.length} recommended events`);
-    res.json(scoredEvents.rows);
-
-  } catch (err) {
-    console.error('Error fetching recommendations:', err);
-    res.status(500).json({ error: 'Failed to fetch recommendations' });
+    res.json(events.rows);
+  } catch (error) {
+    console.error('Recommendation system error:', error);
+    res.status(500).json({ error: 'Recommendation system is unavailable' });
   }
 });
 
