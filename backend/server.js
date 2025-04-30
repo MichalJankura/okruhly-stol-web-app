@@ -643,7 +643,7 @@ app.post('/api/update-weight', async (req, res) => {
 });
 
 // Replace LightFM or old backend URL with new local server
-const RECOMMENDATION_API = "https://okruhly-stol-web-app-s9d9.onrender.com/recommend";
+const RECOMMENDATION_API = "https://okruhly-stol-web-app-1.onrender.com/recommend";
 
 // Fetch recommended events based on preferences
 app.get('/api/recommendations', async (req, res) => {
