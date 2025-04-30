@@ -111,7 +111,7 @@ def health():
         logger.error(f"Health check failed: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route("/api/recommendations", methods=["GET"])
+@app.route("/recommend", methods=["GET"])
 def recommend():
     logger.info("Recommendation request received")
     try:
