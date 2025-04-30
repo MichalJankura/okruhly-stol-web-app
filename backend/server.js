@@ -504,7 +504,19 @@ app.put('/api/user/preferences', async (req, res) => {
 // Save user preferences
 app.post('/api/preferences', async (req, res) => {
   try {
-    const { user_id, eventCategories, preferredTime, preferredDistance, budgetRange, eventSize, additionalNotes } = req.body;
+    const { 
+      user_id, 
+      eventCategories, 
+      preferredTime, 
+      preferredDistance, 
+      budgetRange, 
+      eventSize, 
+      additionalNotes,
+      timeMatters,
+      distanceMatters,
+      budgetMatters,
+      sizeMatters
+    } = req.body;
     
     if (!user_id) {
       return res.status(400).json({ error: 'user_id is required' });
@@ -538,7 +550,11 @@ app.post('/api/preferences', async (req, res) => {
           preferredDistance,
           budgetRange,
           eventSize,
-          additionalNotes
+          additionalNotes,
+          timeMatters,
+          distanceMatters,
+          budgetMatters,
+          sizeMatters
         }, user_id]
       );
 
