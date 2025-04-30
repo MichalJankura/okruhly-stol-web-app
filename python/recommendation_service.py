@@ -1,3 +1,5 @@
+# recommendation_service.py
+
 from flask import Flask, request, jsonify
 import pandas as pd
 import numpy as np
@@ -109,7 +111,7 @@ def health():
         logger.error(f"Health check failed: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route("/recommend", methods=["GET"])
+@app.route("/api/recommendations", methods=["GET"])
 def recommend():
     logger.info("Recommendation request received")
     try:
@@ -125,7 +127,10 @@ def recommend():
 
     except Exception as e:
         logger.error(f"Recommendation failed for user_id {user_id}: {e}", exc_info=True)
-        return jsonify({"status": "error", "message": str(e)}), 500
+        return jsonify({
+            "error": "Recommendation failed",
+            "details": str(e)
+        }), 500
 
 if __name__ == "__main__":
     logger.info("Starting scikit-learn based recommendation service...")
