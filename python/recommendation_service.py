@@ -9,6 +9,7 @@ import logging
 import time
 import os
 from dotenv import load_dotenv
+import traceback
 
 app = Flask(__name__)
 
@@ -126,10 +127,19 @@ def recommend():
         return jsonify(recommendations)
 
     except Exception as e:
-        logger.error(f"Recommendation failed for user_id {user_id}: {e}", exc_info=True)
+        error_type = type(e).__name__
+        error_message = str(e)
+        error_traceback = e.__traceback__
+        logger.error(f"Recommendation failed for user_id {user_id}: {error_type} - {error_message}", exc_info=True)
+        
+        # Get the specific line where the error occurred
+        error_details = traceback.format_exc()
+        
         return jsonify({
             "error": "Recommendation failed",
-            "details": str(e)
+            "error_type": error_type,
+            "error_message": error_message,
+            "error_details": error_details
         }), 500
 
 if __name__ == "__main__":
