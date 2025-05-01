@@ -669,30 +669,8 @@ app.get('/api/recommendations', async (req, res) => {
     const response = await fetch(`${RECOMMENDATION_API}?user_id=${userId}`);
     const recommendedData = await response.json();
 
-    // Handle both single event object and array of IDs
-    let eventIds;
-    if (Array.isArray(recommendedData)) {
-      // If it's an array, check if it contains full objects or just IDs
-      eventIds = recommendedData.map(item => typeof item === 'object' ? item.id : item);
-    } else if (recommendedData && recommendedData.id) {
-      eventIds = [recommendedData.id];
-    } else {
-      // If no valid data, return empty array
-      return res.json([]);
-    }
-
-    // Filter out any undefined or null IDs
-    eventIds = eventIds.filter(id => id !== undefined && id !== null);
-
-    if (eventIds.length === 0) {
-      return res.json([]);
-    }
-
-    // Get full event details by ID
-    const placeholders = eventIds.map((_, idx) => `$${idx + 1}`).join(',');
-    const events = await pool.query(`SELECT * FROM events WHERE id IN (${placeholders})`, eventIds);
-
-    res.json(events.rows);
+    // The recommendation API already returns full event objects, just return them directly
+    res.json(recommendedData);
   } catch (error) {
     console.error("Recommendation API failed:", error);
     res.status(500).json({ error: "Recommendation failed." });
