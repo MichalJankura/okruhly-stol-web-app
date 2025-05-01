@@ -235,21 +235,24 @@ def recommend():
         cursor.close()
         conn.close()
         
-        # Format the response
-        formatted_events = [{
-            'id': event[0],
-            'title': event[1],
-            'category': event[2],
-            'location': event[3],
-            'event_start_date': event[4],
-            'event_end_date': event[5],
-            'start_time': event[6],
-            'end_time': event[7],
-            'tickets': event[8],
-            'shortText': event[9],
-            'link_to': event[10],
-            'image': event[11] or 'https://images.unsplash.com/photo-1540575861501-7cf05a4b125a?ixlib=rb-4.0.3&auto=format&fit=crop&w=320&q=80'
-        } for event in events]
+        # Format the response with proper time handling
+        formatted_events = []
+        for event in events:
+            formatted_event = {
+                'id': event[0],
+                'title': event[1],
+                'category': event[2],
+                'location': event[3],
+                'event_start_date': event[4].strftime('%Y-%m-%d') if event[4] else None,
+                'event_end_date': event[5].strftime('%Y-%m-%d') if event[5] else None,
+                'start_time': str(event[6]) if event[6] else None,
+                'end_time': str(event[7]) if event[7] else None,
+                'tickets': event[8],
+                'shortText': event[9],
+                'link_to': event[10],
+                'image': event[11] or 'https://images.unsplash.com/photo-1540575861501-7cf05a4b125a?ixlib=rb-4.0.3&auto=format&fit=crop&w=320&q=80'
+            }
+            formatted_events.append(formatted_event)
         
         return jsonify(formatted_events)
     except Exception as e:
