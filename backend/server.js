@@ -680,6 +680,49 @@ app.get('/api/recommendations', async (req, res) => {
   }
 });
 
+// Add favorites endpoint
+app.get('/api/favorites', async (req, res) => {
+    try {
+        const userId = req.query.user_id;
+        if (!userId) {
+            return res.status(400).json({ error: 'Missing user_id parameter' });
+        }
+
+        const query = `
+            SELECT e.* FROM events e
+            JOIN user_event_interactions uei ON e.id = uei.event_id
+            WHERE uei.user_id = $1 AND uei.action_type = 'interested'
+            ORDER BY e.event_start_date DESC
+        `;
+
+        const result = await pool.query(query, [userId]);
+        
+        const formattedEvents = result.rows.map(event => ({
+            id: event.id,
+            title: event.title,
+            category: event.event_type,
+            location: event.location,
+            event_start_date: event.event_start_date,
+            event_end_date: event.event_end_date,
+            start_time: event.start_time,
+            end_time: event.end_time,
+            tickets: event.tickets,
+            description: event.description,
+            link_to: event.link_to,
+            image: event.image_url || 'https://images.unsplash.com/photo-1540575861501-7cf05a4b125a?ixlib=rb-4.0.3&auto=format&fit=crop&w=320&q=80'
+        }));
+
+        res.json(formattedEvents);
+    } catch (error) {
+        console.error('Error fetching favorites:', error);
+        res.status(500).json({ 
+            error: 'Failed to fetch favorites',
+            error_type: error.name,
+            error_message: error.message
+        });
+    }
+});
+
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
