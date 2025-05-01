@@ -1,3 +1,5 @@
+# recommendation_service.py
+
 from flask import Flask, request, jsonify
 import pandas as pd
 import numpy as np
@@ -21,9 +23,9 @@ logger = logging.getLogger(__name__)
 # Load environment variables
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'backend', 'database.env'))
 
-# Connect to your database
-try:
-    conn = psycopg2.connect(
+def get_db_connection():
+    """Helper function to create a new database connection"""
+    return psycopg2.connect(
         host=os.getenv('PGHOST'),
         database=os.getenv('PGDATABASE'),
         user=os.getenv('PGUSER'),
@@ -31,15 +33,12 @@ try:
         port=5432,
         sslmode='require'
     )
-    logger.info("Successfully connected to the database")
-except Exception as e:
-    logger.error(f"Failed to connect to database: {e}")
-    raise
 
 # Fetch interaction data from database
 def get_interactions():
     logger.info("Fetching interaction data from database")
     try:
+        conn = get_db_connection()
         query = """
             SELECT user_id, event_id, action_type
             FROM user_event_interactions
@@ -47,6 +46,7 @@ def get_interactions():
         df = pd.read_sql_query(query, conn)
         df['rating'] = df['action_type'].apply(lambda x: 1 if x == 'interested' else 0)
         logger.info(f"Retrieved {len(df)} interactions from database")
+        conn.close()
         return df
     except Exception as e:
         logger.error(f"Error fetching interactions: {e}")
@@ -131,6 +131,7 @@ def recommend_events(user_id, top_n=10):
 def get_user_preferences(user_id):
     """Fetch user preferences from the database"""
     try:
+        conn = get_db_connection()
         query = """
             SELECT preferences FROM users WHERE user_id = %s
         """
@@ -138,6 +139,7 @@ def get_user_preferences(user_id):
         cursor.execute(query, (user_id,))
         result = cursor.fetchone()
         cursor.close()
+        conn.close()
         
         if result and result[0]:
             return result[0]
@@ -149,6 +151,7 @@ def get_user_preferences(user_id):
 def get_all_events():
     """Fetch all events from the database"""
     try:
+        conn = get_db_connection()
         query = """
             SELECT id, time, distance, price, size FROM events
         """
@@ -156,6 +159,7 @@ def get_all_events():
         cursor.execute(query)
         result = cursor.fetchall()
         cursor.close()
+        conn.close()
         
         return [{
             'id': row[0],
