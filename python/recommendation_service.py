@@ -72,10 +72,10 @@ def recommend_events(user_id, top_n=10):
         df = get_interactions()
         user_event_matrix = build_user_event_matrix(df)
 
-        if user_id not in user_event_matrix.index:
-            logger.warning(f"User {user_id} not found in interaction data. Returning top popular events.")
+        # Check for cold start scenario
+        if user_id not in user_event_matrix.index or user_event_matrix.shape[0] < 2:
+            logger.info(f"Not enough users to compute similarity. Returning top-rated events.")
             top_events = df[df['rating'] == 1]['event_id'].value_counts().head(top_n).index.tolist()
-            logger.info(f"Returning {len(top_events)} popular events for new user")
             return top_events
 
         # Calculate base recommendations using collaborative filtering
@@ -116,11 +116,23 @@ def recommend_events(user_id, top_n=10):
         seen_events = set(df[df['user_id'] == user_id]['event_id'])
         recommendations = event_scores.drop(labels=seen_events).sort_values(ascending=False).head(top_n)
 
+        # If we don't have enough recommendations, add popular events
+        if len(recommendations) < top_n:
+            logger.info(f"Not enough personalized recommendations. Adding popular events.")
+            popular_events = df[df['rating'] == 1]['event_id'].value_counts().head(top_n).index.tolist()
+            for event_id in popular_events:
+                if event_id not in recommendations.index and event_id not in seen_events:
+                    recommendations[event_id] = 0.5  # Add with a lower score
+                    if len(recommendations) >= top_n:
+                        break
+
         logger.info(f"Generated {len(recommendations)} recommendations for user {user_id}")
         return recommendations.index.tolist()
     except Exception as e:
         logger.error(f"Error in recommend_events for user {user_id}: {e}")
-        raise
+        # Fallback to popular events if there's an error
+        logger.info("Falling back to popular events due to error")
+        return df[df['rating'] == 1]['event_id'].value_counts().head(top_n).index.tolist()
 
 def get_user_preferences(user_id):
     """Fetch user preferences from the database"""
