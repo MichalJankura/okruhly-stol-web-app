@@ -100,20 +100,16 @@ def recommend_events(user_id, top_n=10):
                 
                 # Only adjust score if preference matters
                 if user_preferences.get('timeMatters', True):
-                    if user_preferences.get('preferredTime') and event.get('time') == user_preferences.get('preferredTime'):
+                    if user_preferences.get('preferredTime') and event.get('start_time') == user_preferences.get('preferredTime'):
                         score *= 1.2  # Boost score if time matches
                 
-                if user_preferences.get('distanceMatters', True):
-                    if user_preferences.get('preferredDistance') and event.get('distance') == user_preferences.get('preferredDistance'):
-                        score *= 1.2  # Boost score if distance matches
+                if user_preferences.get('locationMatters', True):
+                    if user_preferences.get('preferredLocation') and event.get('location') == user_preferences.get('preferredLocation'):
+                        score *= 1.2  # Boost score if location matches
                 
-                if user_preferences.get('budgetMatters', True):
-                    if user_preferences.get('budgetRange') and event.get('price') == user_preferences.get('budgetRange'):
-                        score *= 1.2  # Boost score if budget matches
-                
-                if user_preferences.get('sizeMatters', True):
-                    if user_preferences.get('eventSize') and event.get('size') == user_preferences.get('eventSize'):
-                        score *= 1.2  # Boost score if size matches
+                if user_preferences.get('typeMatters', True):
+                    if user_preferences.get('preferredType') and event.get('event_type') == user_preferences.get('preferredType'):
+                        score *= 1.2  # Boost score if event type matches
                 
                 event_scores_dict[event_id] = score
 
@@ -153,7 +149,10 @@ def get_all_events():
     try:
         conn = get_db_connection()
         query = """
-            SELECT id, time, distance, price, size FROM events
+            SELECT id, title, event_type, location, event_start_date, 
+                   event_end_date, start_time, end_time, tickets, 
+                   description, link_to, image_url 
+            FROM events
         """
         cursor = conn.cursor()
         cursor.execute(query)
@@ -163,10 +162,17 @@ def get_all_events():
         
         return [{
             'id': row[0],
-            'time': row[1],
-            'distance': row[2],
-            'price': row[3],
-            'size': row[4]
+            'title': row[1],
+            'event_type': row[2],
+            'location': row[3],
+            'event_start_date': row[4],
+            'event_end_date': row[5],
+            'start_time': row[6],
+            'end_time': row[7],
+            'tickets': row[8],
+            'description': row[9],
+            'link_to': row[10],
+            'image_url': row[11]
         } for row in result]
     except Exception as e:
         logger.error(f"Error fetching events: {e}")
