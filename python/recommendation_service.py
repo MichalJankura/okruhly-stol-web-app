@@ -1,5 +1,3 @@
-# recommendation_service.py
-
 from flask import Flask, request, jsonify
 import pandas as pd
 import numpy as np
@@ -224,6 +222,60 @@ def recommend():
             "error_type": error_type,
             "error_message": error_message,
             "error_details": error_details
+        }), 500
+
+@app.route("/favorites", methods=["GET"])
+def get_favorites():
+    logger.info("Favorites request received")
+    try:
+        user_id = request.args.get("user_id", type=int)
+        if user_id is None:
+            logger.warning("Favorites request missing user_id parameter")
+            return jsonify({"error": "Missing user_id parameter"}), 400
+
+        logger.info(f"Fetching favorites for user_id: {user_id}")
+        
+        # Get user's interested events
+        conn = get_db_connection()
+        query = """
+            SELECT e.* FROM events e
+            JOIN user_event_interactions uei ON e.id = uei.event_id
+            WHERE uei.user_id = %s AND uei.action_type = 'interested'
+            ORDER BY e.event_start_date DESC
+        """
+        cursor = conn.cursor()
+        cursor.execute(query, (user_id,))
+        events = cursor.fetchall()
+        cursor.close()
+        conn.close()
+
+        # Format the events
+        formatted_events = [{
+            'id': event[0],
+            'title': event[1],
+            'category': event[2],
+            'location': event[3],
+            'event_start_date': event[4],
+            'event_end_date': event[5],
+            'start_time': event[6],
+            'end_time': event[7],
+            'tickets': event[8],
+            'description': event[9],
+            'link_to': event[10],
+            'image_url': event[11]
+        } for event in events]
+
+        logger.info(f"Successfully fetched {len(formatted_events)} favorites for user {user_id}")
+        return jsonify(formatted_events)
+
+    except Exception as e:
+        error_type = type(e).__name__
+        error_message = str(e)
+        logger.error(f"Failed to fetch favorites for user_id {user_id}: {error_type} - {error_message}", exc_info=True)
+        return jsonify({
+            "error": "Failed to fetch favorites",
+            "error_type": error_type,
+            "error_message": error_message
         }), 500
 
 if __name__ == "__main__":
