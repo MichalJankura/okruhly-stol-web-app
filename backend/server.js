@@ -672,11 +672,19 @@ app.get('/api/recommendations', async (req, res) => {
     // Handle both single event object and array of IDs
     let eventIds;
     if (Array.isArray(recommendedData)) {
-      eventIds = recommendedData;
+      // If it's an array, check if it contains full objects or just IDs
+      eventIds = recommendedData.map(item => typeof item === 'object' ? item.id : item);
     } else if (recommendedData && recommendedData.id) {
       eventIds = [recommendedData.id];
     } else {
       // If no valid data, return empty array
+      return res.json([]);
+    }
+
+    // Filter out any undefined or null IDs
+    eventIds = eventIds.filter(id => id !== undefined && id !== null);
+
+    if (eventIds.length === 0) {
       return res.json([]);
     }
 
