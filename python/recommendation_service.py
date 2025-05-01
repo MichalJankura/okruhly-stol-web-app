@@ -208,33 +208,53 @@ def health():
 
 @app.route("/recommend", methods=["GET"])
 def recommend():
-    logger.info("Recommendation request received")
     try:
-        user_id = request.args.get("user_id", type=int)
-        if user_id is None:
-            logger.warning("Recommendation request missing user_id parameter")
-            return jsonify({"error": "Missing user_id parameter"}), 400
+        user_id = request.args.get('user_id')
+        if not user_id:
+            return jsonify({"error": "user_id is required"}), 400
 
-        logger.info(f"Processing recommendation for user_id: {user_id}")
-        recommendations = recommend_events(user_id)
-        logger.info(f"Successfully generated recommendations for user {user_id}")
-        return jsonify(recommendations)
-
+        # Get recommended event IDs
+        recommended_event_ids = recommend_events(user_id)
+        
+        # Get full event data for recommended events
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Create a parameterized query with the correct number of placeholders
+        placeholders = ','.join(['%s'] * len(recommended_event_ids))
+        query = f"""
+            SELECT id, title, event_type, location, event_start_date, 
+                   event_end_date, start_time, end_time, tickets, 
+                   description, link_to, image_url 
+            FROM events 
+            WHERE id IN ({placeholders})
+        """
+        
+        cursor.execute(query, recommended_event_ids)
+        events = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        # Format the response
+        formatted_events = [{
+            'id': event[0],
+            'title': event[1],
+            'category': event[2],
+            'location': event[3],
+            'event_start_date': event[4],
+            'event_end_date': event[5],
+            'start_time': event[6],
+            'end_time': event[7],
+            'tickets': event[8],
+            'shortText': event[9],
+            'link_to': event[10],
+            'image': event[11] or 'https://images.unsplash.com/photo-1540575861501-7cf05a4b125a?ixlib=rb-4.0.3&auto=format&fit=crop&w=320&q=80'
+        } for event in events]
+        
+        return jsonify(formatted_events)
     except Exception as e:
-        error_type = type(e).__name__
-        error_message = str(e)
-        error_traceback = e.__traceback__
-        logger.error(f"Recommendation failed for user_id {user_id}: {error_type} - {error_message}", exc_info=True)
-        
-        # Get the specific line where the error occurred
-        error_details = traceback.format_exc()
-        
-        return jsonify({
-            "error": "Recommendation failed",
-            "error_type": error_type,
-            "error_message": error_message,
-            "error_details": error_details
-        }), 500
+        logger.error(f"Error in recommend endpoint: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/favorites", methods=["GET"])
 def get_favorites():
