@@ -38,11 +38,13 @@ def get_interactions():
     try:
         conn = get_db_connection()
         query = """
-            SELECT user_id, event_id, action_type
+            SELECT DISTINCT ON (user_id, event_id)
+                   user_id, event_id,
+                   CASE WHEN action_type = 'interested' THEN 1 ELSE 0 END AS rating
             FROM user_event_interactions
+            ORDER BY user_id, event_id, timestamp DESC;
         """
         df = pd.read_sql_query(query, conn)
-        df['rating'] = df['action_type'].apply(lambda x: 1 if x == 'interested' else 0)
         logger.info(f"Retrieved {len(df)} interactions from database")
         conn.close()
         return df
@@ -232,6 +234,10 @@ def recommend():
         # Get recommended event IDs
         recommended_event_ids = recommend_events(user_id)
         
+        # If there are no recommended events, return an empty list
+        if not recommended_event_ids:
+            return jsonify([])
+
         # Get full event data for recommended events
         conn = get_db_connection()
         cursor = conn.cursor()
