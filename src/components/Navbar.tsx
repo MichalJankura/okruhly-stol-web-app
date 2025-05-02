@@ -1,11 +1,15 @@
 import { Disclosure as HeadlessDisclosure, Menu as HeadlessMenu } from '@headlessui/react'
-import { Bars3Icon, BellIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import { ChevronDownIcon } from '@heroicons/react/20/solid'
 import config from '../config/index.json'
 import { useState, useEffect } from 'react'
 import { eventEmitter } from '../utils/events'
 import { useRouter } from 'next/router'
 import Login from './Registration/Login'
+import { FaHeart, FaClock, FaMapMarkerAlt, FaTimes as FaClose } from "react-icons/fa";
+import { format } from "date-fns";
+import { sk } from "date-fns/locale";
+import EventModal from '../components/EventModal';
 
 // Updated downloadItems to use real document files
 const downloadItems = [
@@ -34,12 +38,39 @@ interface User {
   firstName?: string;
   lastName?: string;
   email: string;
+  user_id?: string;
+  id?: number;
+}
+
+// BlogArticle interface (copy from BlogCardGrid)
+interface BlogArticle {
+  id: number;
+  title: string;
+  category: string;
+  date: string;
+  month: string;
+  shortText: string;
+  fullText: string;
+  image: string;
+  event_start_date?: string;
+  event_end_date?: string;
+  start_time?: string;
+  end_time?: string;
+  tickets?: string;
+  link_to?: string;
+  price?: number;
+  location?: string;
+  map_url?: string;
 }
 
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
   const [showLogin, setShowLogin] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<BlogArticle | null>(null);
+  const [showModal, setShowModal] = useState(false);
   const router = useRouter();
+  const [favorites, setFavorites] = useState<BlogArticle[]>([]);
+  const [loadingFavorites, setLoadingFavorites] = useState(false);
 
   // Add a function to handle document downloads
   const handleDocumentDownload = (e: React.MouseEvent<HTMLAnchorElement>, fileName: string) => {
@@ -111,6 +142,83 @@ export default function Navbar() {
 
   const handleClose = () => {
     setShowLogin(false);
+  };
+
+  const fetchFavorites = async () => {
+    const userId = user?.user_id || user?.id;
+    if (!userId) {
+      console.log("No user_id or id available, skipping fetch");
+      return;
+    }
+
+    try {
+      setLoadingFavorites(true);
+      const response = await fetch(`https://okruhly-stol-web-app-s9d9.onrender.com/api/favorites?user_id=${userId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch favorites');
+      }
+      const data = await response.json();
+      
+      // Format the data to match BlogCardGrid's format
+      const formattedFavorites = data.map((post: any) => {
+        console.log(`[DEBUG] Processing favorite event "${post.title}" with map_url: ${post.map_url}`);
+        return {
+          id: post.id,
+          title: post.title,
+          category: post.category || 'Unknown',
+          date: post.date,
+          month: post.month,
+          shortText: post.short_text || post.shortText || '',
+          fullText: post.full_text || post.fullText || '',
+          image: post.image || 'https://images.unsplash.com/photo-1540575861501-7cf05a4b125a?ixlib=rb-4.0.3&auto=format&fit=crop&w=320&q=80',
+          event_start_date: post.event_start_date,
+          event_end_date: post.event_end_date,
+          start_time: post.start_time,
+          end_time: post.end_time,
+          tickets: post.tickets,
+          link_to: post.link_to,
+          price: post.price || 0,
+          location: post.location || 'Miesto Neznáme',
+          map_url: post.map_url
+        };
+      });
+      
+      console.log('[DEBUG] Formatted favorites:', formattedFavorites);
+      setFavorites(formattedFavorites);
+    } catch (error) {
+      console.error('Error fetching favorites:', error);
+    } finally {
+      setLoadingFavorites(false);
+    }
+  };
+
+  // Add debug logging for user state
+  useEffect(() => {
+    console.log('Current user state:', user);
+  }, [user]);
+
+  const handleViewDetails = (event: BlogArticle) => {
+    console.log(`[DEBUG] Opening modal for event "${event.title}" with map_url: ${event.map_url}`);
+    setSelectedEvent(event);
+    setShowModal(true);
+  };
+
+  const removeFavorite = async (eventId: number) => {
+    const userId = user?.user_id || user?.id;
+    if (!userId) return;
+    setLoadingFavorites(true);
+    try {
+      const res = await fetch('https://okruhly-stol-web-app-s9d9.onrender.com/api/favorites', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, event_id: eventId })
+      });
+      if (res.ok) {
+        setFavorites(prev => prev.filter(fav => fav.id !== eventId));
+      }
+    } finally {
+      setLoadingFavorites(false);
+    }
   };
 
   return (
@@ -185,14 +293,72 @@ export default function Navbar() {
             </div>
           </div>
           <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
-            <button
-              type="button"
-              className="relative rounded-full bg-gray-800 p-1 text-white hover:text-white focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-800 focus:outline-hidden"
-            >
-              <span className="absolute -inset-1.5" />
-              <span className="sr-only">View notifications</span>
-              <BellIcon aria-hidden="true" className="size-6" />
-            </button>
+            {/* Favorites Dropdown - Only show if user is logged in */}
+            {user && (
+              <HeadlessMenu as="div" className="relative ml-3">
+                <div>
+                  <HeadlessMenu.Button 
+                    className="relative flex rounded-full bg-white/80 p-2 hover:bg-white transition-colors"
+                    onClick={fetchFavorites}
+                  >
+                    <span className="absolute -inset-1.5" />
+                    <span className="sr-only">View favorites</span>
+                    <FaHeart className="text-[#FF4C4C]" />
+                  </HeadlessMenu.Button>
+                </div>
+                <HeadlessMenu.Items className="fixed sm:absolute left-0 sm:left-1/2 sm:-translate-x-1/2 z-10 mt-2 w-[90vw] sm:w-80 lg:w-96 origin-top-center rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+                  <div className="px-4 py-2 border-b border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900">Obľúbené podujatia</h3>
+                  </div>
+                  <div className="max-h-[60vh] overflow-y-auto">
+                    {loadingFavorites ? (
+                      <div className="px-4 py-2 text-gray-500">Načítavam...</div>
+                    ) : favorites.length === 0 ? (
+                      <div className="px-4 py-2 text-gray-500">Nemáte žiadne obľúbené podujatia</div>
+                    ) : (
+                      favorites.map((event, index) => (
+                        <HeadlessMenu.Item key={`${event.id}-${index}`}>
+                          {({ active }: { active: boolean }) => (
+                            <div 
+                              className={`${active ? 'bg-gray-100' : ''} px-4 py-2 cursor-pointer flex items-center`}
+                              onClick={() => handleViewDetails(event)}
+                            >
+                              <div className="flex items-start gap-3 flex-1">
+                                <img 
+                                  src={event.image} 
+                                  alt={event.title} 
+                                  className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 object-cover rounded"
+                                />
+                                <div className="flex-1 min-w-0 overflow-hidden">
+                                  <h4 className="text-sm font-medium text-gray-900 break-words line-clamp-2" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{event.title}</h4>
+                                  <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                                    <FaClock />
+                                    <span>
+                                      {format(new Date(event.event_start_date || event.date), "d. MMMM yyyy", { locale: sk })}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                                    <FaMapMarkerAlt />
+                                    <span className="block line-clamp-1 break-words overflow-hidden">{event.location}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <button
+                                className="ml-2 p-1 rounded-full hover:bg-gray-200 z-10"
+                                onClick={e => { e.stopPropagation(); removeFavorite(event.id); }}
+                                title="Odstrániť z obľúbených"
+                              >
+                                <FaClose className="text-red-500" />
+                              </button>
+                            </div>
+                          )}
+                        </HeadlessMenu.Item>
+                      ))
+                    )}
+                  </div>
+                </HeadlessMenu.Items>
+              </HeadlessMenu>
+            )}
 
             {/* Add user name display */}
             {user && (
@@ -331,6 +497,17 @@ export default function Navbar() {
             <Login onRegisterClick={handleRegisterClick} onClose={handleClose} />
           </div>
         </div>
+      )}
+
+      {/* Event Modal */}
+      {showModal && selectedEvent && (
+        <EventModal 
+          event={selectedEvent} 
+          onClose={() => {
+            setShowModal(false);
+            setSelectedEvent(null);
+          }} 
+        />
       )}
     </HeadlessDisclosure>
   )
