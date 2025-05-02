@@ -699,6 +699,7 @@ app.get('/api/favorites', async (req, res) => {
             title: event.title,
             category: event.event_type,
             location: event.location,
+            map_url: getGoogleMapsEmbedUrl(event.location),
             event_start_date: event.event_start_date,
             event_end_date: event.event_end_date,
             start_time: event.start_time,
