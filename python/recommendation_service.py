@@ -94,7 +94,7 @@ def recommend_events(user_id, top_n=10):
         interaction_matrix = build_user_event_matrix(df)
 
         # Check for cold start scenario
-        if user_id not in interaction_matrix.index or interaction_matrix.shape[0] < 2:
+        if int(user_id) not in interaction_matrix.index or interaction_matrix.loc[int(user_id)].sum() == 0:
             logger.info(f"Cold start for user {user_id}. Ranking by preferences + top events.")
 
             # Score based on preferences
