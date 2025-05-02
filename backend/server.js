@@ -686,9 +686,12 @@ app.get('/api/favorites', async (req, res) => {
         }
 
         const query = `
-            SELECT e.* FROM events e
+            SELECT DISTINCT e.* FROM events e
             JOIN user_event_interactions uei ON e.id = uei.event_id
             WHERE uei.user_id = $1 AND uei.action_type = 'interested'
+            GROUP BY e.id, e.title, e.event_type, e.location, e.event_start_date, 
+                     e.event_end_date, e.start_time, e.end_time, e.tickets, 
+                     e.description, e.link_to, e.image_url
             ORDER BY e.event_start_date DESC
         `;
 
