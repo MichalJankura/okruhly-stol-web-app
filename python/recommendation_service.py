@@ -79,7 +79,9 @@ def recommend_events(user_id, top_n=10):
             return top_events
 
         # Calculate base recommendations using collaborative filtering
+        logger.info(f"Calculating cosine similarity for user-event matrix of shape {user_event_matrix.shape}")
         similarity = cosine_similarity(user_event_matrix)
+        logger.info(f"Cosine similarity matrix calculated with shape {similarity.shape}")
         user_idx = user_event_matrix.index.get_loc(user_id)
         user_sim = similarity[user_idx]
 
