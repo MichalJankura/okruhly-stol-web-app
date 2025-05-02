@@ -616,8 +616,10 @@ app.post('/api/interactions', async (req, res) => {
     console.log('Logging interaction:', { user_id, event_id, action_type });
 
     await pool.query(
-      `INSERT INTO user_event_interactions (user_id, event_id, action_type)
-       VALUES ($1, $2, $3)`,
+      `INSERT INTO user_event_interactions (user_id, event_id, action_type, timestamp)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (user_id, event_id)
+       DO UPDATE SET action_type = EXCLUDED.action_type, timestamp = NOW();`,
       [user_id, event_id, action_type]
     );
 
