@@ -677,7 +677,7 @@ app.get('/api/recommendations', async (req, res) => {
   }
 });
 
-// Add favorites endpoint
+// Favorites endpoints using user_favorites table
 app.get('/api/favorites', async (req, res) => {
     try {
         const userId = req.query.user_id;
@@ -686,17 +686,13 @@ app.get('/api/favorites', async (req, res) => {
         }
 
         const query = `
-            SELECT DISTINCT e.* FROM events e
-            JOIN user_event_interactions uei ON e.id = uei.event_id
-            WHERE uei.user_id = $1 AND uei.action_type = 'interested'
-            GROUP BY e.id, e.title, e.event_type, e.location, e.event_start_date, 
-                     e.event_end_date, e.start_time, e.end_time, e.tickets, 
-                     e.description, e.link_to, e.image_url
-            ORDER BY e.event_start_date DESC
+            SELECT e.* FROM events e
+            JOIN user_favorites uf ON e.id = uf.event_id
+            WHERE uf.user_id = $1
+            ORDER BY uf.favorited_at DESC
         `;
 
         const result = await pool.query(query, [userId]);
-        
         const formattedEvents = result.rows.map(event => ({
             id: event.id,
             title: event.title,
@@ -712,7 +708,6 @@ app.get('/api/favorites', async (req, res) => {
             link_to: event.link_to,
             image: event.image_url || 'https://images.unsplash.com/photo-1540575861501-7cf05a4b125a?ixlib=rb-4.0.3&auto=format&fit=crop&w=320&q=80'
         }));
-
         res.json(formattedEvents);
     } catch (error) {
         console.error('Error fetching favorites:', error);
@@ -721,6 +716,42 @@ app.get('/api/favorites', async (req, res) => {
             error_type: error.name,
             error_message: error.message
         });
+    }
+});
+
+// Add a favorite event
+app.post('/api/favorites', async (req, res) => {
+    try {
+        const { user_id, event_id } = req.body;
+        if (!user_id || !event_id) {
+            return res.status(400).json({ error: 'user_id and event_id are required' });
+        }
+        await pool.query(
+            'INSERT INTO user_favorites (user_id, event_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+            [user_id, event_id]
+        );
+        res.json({ message: 'Added to favorites' });
+    } catch (err) {
+        console.error('Error adding favorite:', err);
+        res.status(500).json({ error: 'Failed to add favorite' });
+    }
+});
+
+// Remove a favorite event
+app.delete('/api/favorites', async (req, res) => {
+    try {
+        const { user_id, event_id } = req.body;
+        if (!user_id || !event_id) {
+            return res.status(400).json({ error: 'user_id and event_id are required' });
+        }
+        await pool.query(
+            'DELETE FROM user_favorites WHERE user_id = $1 AND event_id = $2',
+            [user_id, event_id]
+        );
+        res.json({ message: 'Removed from favorites' });
+    } catch (err) {
+        console.error('Error removing favorite:', err);
+        res.status(500).json({ error: 'Failed to remove favorite' });
     }
 });
 
