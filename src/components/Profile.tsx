@@ -7,6 +7,10 @@ interface PreferencesState {
   budgetRange: string;
   eventSize: string;
   additionalNotes: string;
+  timeMatters: boolean;
+  distanceMatters: boolean;
+  budgetMatters: boolean;
+  sizeMatters: boolean;
 }
 
 interface PreferencesAction {
@@ -21,7 +25,11 @@ const initialState: PreferencesState = {
   preferredDistance: "0-5",
   budgetRange: "free",
   eventSize: "",
-  additionalNotes: ""
+  additionalNotes: "",
+  timeMatters: true,
+  distanceMatters: true,
+  budgetMatters: true,
+  sizeMatters: true
 };
 
 function preferencesReducer(state: PreferencesState, action: PreferencesAction): PreferencesState {
@@ -30,12 +38,16 @@ function preferencesReducer(state: PreferencesState, action: PreferencesAction):
       return { ...state, [action.field as string]: action.value };
     case "RESET":
       return initialState;
+    case "LOAD":
+      return { ...state, ...action.value };
     default:
       return state;
   }
 }
 
 interface User {
+  id?: string | number;
+  user_id?: string | number;
   firstName?: string;
   lastName?: string;
   email: string;
@@ -68,20 +80,77 @@ const Profile = () => {
   // Only run this effect on the client side
   useEffect(() => {
     if (!isClient) return;
-    
     // Check for user data in localStorage when component mounts
     const userData = localStorage.getItem('user');
     if (userData) {
       const parsedUser = JSON.parse(userData);
       console.log('Načítané údaje používateľa:', parsedUser);
       setUser(parsedUser);
-      
       // Set form values from user data
       setFormData({
         fullName: `${parsedUser.firstName || ''} ${parsedUser.lastName || ''}`.trim(),
         email: parsedUser.email || '',
         password: ''
       });
+
+      // Fetch preferences from backend
+      const userId = parsedUser.user_id || parsedUser.id;
+      if (userId) {
+        console.log('Fetching preferences for user_id:', userId);
+        fetch(`https://okruhly-stol-web-app-s9d9.onrender.com/api/preferences?user_id=${userId}`)
+          .then(async response => {
+            console.log('Preferences response status:', response.status);
+            const data = await response.json();
+            console.log('Raw preferences data:', data);
+            
+            if (response.ok) {
+              // Initialize preferences with default values
+              const loadedPreferences: PreferencesState = {
+                eventCategories: [],
+                preferredTime: "",
+                preferredDistance: "0-5",
+                budgetRange: "free",
+                eventSize: "",
+                additionalNotes: "",
+                timeMatters: true,
+                distanceMatters: true,
+                budgetMatters: true,
+                sizeMatters: true
+              };
+
+              // If the response is an array of event categories
+              if (Array.isArray(data)) {
+                console.log('Received array of categories:', data);
+                loadedPreferences.eventCategories = data;
+              } else {
+                // Merge the received data with default values
+                Object.assign(loadedPreferences, data);
+                
+                // Ensure eventCategories is an array
+                if (data.eventCategories) {
+                  loadedPreferences.eventCategories = Array.isArray(data.eventCategories) 
+                    ? data.eventCategories 
+                    : [data.eventCategories];
+                }
+              }
+
+              console.log('Final loaded preferences:', loadedPreferences);
+              dispatch({ type: 'LOAD', value: loadedPreferences });
+              setNotification({ message: 'Preferencie boli načítané!', type: 'success' });
+            } else {
+              console.error('Error response:', data);
+              setNotification({ message: data.error || 'Chyba pri načítaní preferencií.', type: 'error' });
+            }
+          })
+          .catch((error) => {
+            console.error('Error fetching preferences:', error);
+            setNotification({ message: 'Chyba pri načítaní preferencií.', type: 'error' });
+          });
+      } else {
+        console.log('No user_id or id found in user data');
+      }
+    } else {
+      console.log('No user data found in localStorage');
     }
   }, [isClient]);
 
@@ -150,7 +219,7 @@ const Profile = () => {
     return isValid;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!validateForm()) {
@@ -180,8 +249,51 @@ const Profile = () => {
     
     // Update user state
     setUser(updatedUser);
+
+    // Save preferences to backend if user_id exists
+    const userId = user?.user_id || user?.id;
+    if (userId) {
+      try {
+        const payload = {
+          user_id: userId,
+          eventCategories: preferences.eventCategories,
+          preferredTime: preferences.preferredTime,
+          preferredDistance: preferences.preferredDistance,
+          budgetRange: preferences.budgetRange,
+          eventSize: preferences.eventSize,
+          additionalNotes: preferences.additionalNotes,
+          timeMatters: preferences.timeMatters,
+          distanceMatters: preferences.distanceMatters,
+          budgetMatters: preferences.budgetMatters,
+          sizeMatters: preferences.sizeMatters
+        };
+        
+        console.log('Saving preferences with payload:', payload);
+        
+        const response = await fetch('https://okruhly-stol-web-app-s9d9.onrender.com/api/preferences', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        
+        console.log('Save response status:', response.status);
+        const data = await response.json();
+        console.log('Save response data:', data);
+        
+        if (response.ok) {
+          setNotification({ message: 'Preferencie boli uložené do databázy!', type: 'success' });
+        } else {
+          setNotification({ message: data.error || 'Chyba pri ukladaní preferencií.', type: 'error' });
+        }
+      } catch (err) {
+        console.error('Error saving preferences:', err);
+        setNotification({ message: 'Chyba pri ukladaní preferencií.', type: 'error' });
+      }
+    } else {
+      console.log('No user_id or id found when trying to save preferences');
+    }
     
-    // Show success message
+    // Show success message for profile
     setNotification({
       message: "Profil bol úspešne aktualizovaný!",
       type: 'success'
@@ -299,13 +411,31 @@ const Profile = () => {
             </div>
 
             <div className="mb-8">
-              <h2 className="text-xl font-semibold mb-4">Preferencie</h2>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Preferencie</h2>
+                <button
+                  onClick={() => {
+                    dispatch({ type: "RESET" });
+                    setNotification({ 
+                      message: "Preferencie boli vynulované!", 
+                      type: 'success' 
+                    });
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+                >
+                  Vynulovať preferencie
+                </button>
+              </div>
               
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Kategórie podujatí (Vyberte najviac 3)</label>
                   <div className="flex flex-wrap gap-2">
-                    {["Hudba", "Šport", "Umenie", "Technológie", "Jedlo", "Divadlo"].map((category) => (
+                    {[
+                      "Koncert", "Divadlo", "Výstava",
+                      "Vernisáž / Výstava", "Trh / Jarmok / Burza",
+                      "Sprevádzanie", "Kultúrne podujatie", "Ostatné"
+                    ].map((category) => (
                       <label key={category} className="inline-flex items-center">
                         <input
                           type="checkbox"
@@ -314,7 +444,7 @@ const Profile = () => {
                           onChange={(e) => {
                             const selected = e.target.checked
                               ? [...preferences.eventCategories, category].slice(0, 3)
-                              : preferences.eventCategories.filter((c: string) => c !== category);
+                              : preferences.eventCategories.filter((c) => c !== category);
                             dispatch({ type: "UPDATE_FIELD", field: "eventCategories", value: selected });
                           }}
                           className="form-checkbox"
@@ -328,62 +458,134 @@ const Profile = () => {
 
                 <div>
                   <label className="block text-sm font-medium mb-1">Preferovaný čas dňa</label>
-                  <select
-                    value={preferences.preferredTime}
-                    onChange={(e) => dispatch({ type: "UPDATE_FIELD", field: "preferredTime", value: e.target.value })}
-                    className="w-full p-3 border rounded-md bg-background"
-                  >
-                    <option value="">Vyberte čas</option>
-                    <option value="morning">Ráno</option>
-                    <option value="afternoon">Popoludnie</option>
-                    <option value="evening">Večer</option>
-                    <option value="night">Noc</option>
-                  </select>
+                  <div className="space-y-2">
+                    <select
+                      value={preferences.preferredTime}
+                      onChange={(e) => dispatch({ type: "UPDATE_FIELD", field: "preferredTime", value: e.target.value })}
+                      className="w-full p-3 border rounded-md bg-background"
+                      disabled={!preferences.timeMatters}
+                    >
+                      <option value="">Vyberte čas</option>
+                      <option value="morning">Ráno</option>
+                      <option value="afternoon">Popoludnie</option>
+                      <option value="evening">Večer</option>
+                      <option value="night">Noc</option>
+                    </select>
+                    <label className="inline-flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={!preferences.timeMatters}
+                        onChange={(e) => {
+                          const isChecked = !e.target.checked;
+                          dispatch({ type: "UPDATE_FIELD", field: "timeMatters", value: isChecked });
+                          if (!isChecked) {
+                            dispatch({ type: "UPDATE_FIELD", field: "preferredTime", value: "" });
+                          }
+                        }}
+                        className="form-checkbox"
+                      />
+                      <span className="ml-2">Nezáleží</span>
+                    </label>
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium mb-1">Vzdialenosť</label>
-                  <select
-                    value={preferences.preferredDistance}
-                    onChange={(e) => dispatch({ type: "UPDATE_FIELD", field: "preferredDistance", value: e.target.value })}
-                    className="w-full p-3 border rounded-md bg-background"
-                  >
-                    <option value="0-5">0-5 km</option>
-                    <option value="5-15">5-15 km</option>
-                    <option value="15-30">15-30 km</option>
-                    <option value="30+">30+ km</option>
-                  </select>
+                  <div className="space-y-2">
+                    <select
+                      value={preferences.preferredDistance}
+                      onChange={(e) => dispatch({ type: "UPDATE_FIELD", field: "preferredDistance", value: e.target.value })}
+                      className="w-full p-3 border rounded-md bg-background"
+                      disabled={!preferences.distanceMatters}
+                    >
+                      <option value="0-5">0-5 km</option>
+                      <option value="5-15">5-15 km</option>
+                      <option value="15-30">15-30 km</option>
+                      <option value="30+">30+ km</option>
+                    </select>
+                    <label className="inline-flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={!preferences.distanceMatters}
+                        onChange={(e) => {
+                          const isChecked = !e.target.checked;
+                          dispatch({ type: "UPDATE_FIELD", field: "distanceMatters", value: isChecked });
+                          if (!isChecked) {
+                            dispatch({ type: "UPDATE_FIELD", field: "preferredDistance", value: "0-5" });
+                          }
+                        }}
+                        className="form-checkbox"
+                      />
+                      <span className="ml-2">Nezáleží</span>
+                    </label>
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium mb-1">Rozpočet</label>
-                  <select
-                    value={preferences.budgetRange}
-                    onChange={(e) => dispatch({ type: "UPDATE_FIELD", field: "budgetRange", value: e.target.value })}
-                    className="w-full p-3 border rounded-md bg-background"
-                  >
-                    <option value="free">Zdarma</option>
-                    <option value="under10">&lt; €10</option>
-                    <option value="10-30">€10-30</option>
-                    <option value="30plus">€30+</option>
-                  </select>
+                  <div className="space-y-2">
+                    <select
+                      value={preferences.budgetRange}
+                      onChange={(e) => dispatch({ type: "UPDATE_FIELD", field: "budgetRange", value: e.target.value })}
+                      className="w-full p-3 border rounded-md bg-background"
+                      disabled={!preferences.budgetMatters}
+                    >
+                      <option value="free">Zdarma</option>
+                      <option value="under10">&lt; €10</option>
+                      <option value="10-30">€10-30</option>
+                      <option value="30plus">€30+</option>
+                    </select>
+                    <label className="inline-flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={!preferences.budgetMatters}
+                        onChange={(e) => {
+                          const isChecked = !e.target.checked;
+                          dispatch({ type: "UPDATE_FIELD", field: "budgetMatters", value: isChecked });
+                          if (!isChecked) {
+                            dispatch({ type: "UPDATE_FIELD", field: "budgetRange", value: "free" });
+                          }
+                        }}
+                        className="form-checkbox"
+                      />
+                      <span className="ml-2">Nezáleží</span>
+                    </label>
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium mb-1">Veľkosť podujatia</label>
-                  <div className="space-x-4">
-                    {["Malé", "Stredné", "Veľké"].map((size) => (
-                      <label key={size} className="inline-flex items-center">
-                        <input
-                          type="radio"
-                          value={size.toLowerCase()}
-                          checked={preferences.eventSize === size.toLowerCase()}
-                          onChange={(e) => dispatch({ type: "UPDATE_FIELD", field: "eventSize", value: e.target.value })}
-                          className="form-radio"
-                        />
-                        <span className="ml-2">{size}</span>
-                      </label>
-                    ))}
+                  <div className="space-y-2">
+                    <div className="space-x-4">
+                      {["Malé", "Stredné", "Veľké"].map((size) => (
+                        <label key={size} className="inline-flex items-center">
+                          <input
+                            type="radio"
+                            value={size.toLowerCase()}
+                            checked={preferences.eventSize === size.toLowerCase()}
+                            onChange={(e) => dispatch({ type: "UPDATE_FIELD", field: "eventSize", value: e.target.value })}
+                            className="form-radio"
+                            disabled={!preferences.sizeMatters}
+                          />
+                          <span className="ml-2">{size}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <label className="inline-flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={!preferences.sizeMatters}
+                        onChange={(e) => {
+                          const isChecked = !e.target.checked;
+                          dispatch({ type: "UPDATE_FIELD", field: "sizeMatters", value: isChecked });
+                          if (!isChecked) {
+                            dispatch({ type: "UPDATE_FIELD", field: "eventSize", value: "" });
+                          }
+                        }}
+                        className="form-checkbox"
+                      />
+                      <span className="ml-2">Nezáleží</span>
+                    </label>
                   </div>
                 </div>
 
