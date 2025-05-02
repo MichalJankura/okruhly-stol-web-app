@@ -8,6 +8,9 @@ import time
 import os
 from dotenv import load_dotenv
 import traceback
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.preprocessing import MultiLabelBinarizer
+from collections import defaultdict
 
 app = Flask(__name__)
 
@@ -63,63 +66,81 @@ def build_user_event_matrix(df):
         logger.error(f"Error building user-event matrix: {e}")
         raise
 
+# Build event content matrix
+def build_event_content_matrix(events):
+    df = pd.DataFrame(events)
+
+    # Combine relevant features into one string per event
+    df['combined'] = (
+        df['event_type'].fillna('') + ' ' +
+        df['location'].fillna('') + ' ' +
+        df['start_time'].fillna('').astype(str)
+    )
+
+    vectorizer = TfidfVectorizer()
+    content_matrix = vectorizer.fit_transform(df['combined'])
+
+    return content_matrix, df['id'].values
+
 # Recommend events for a user
 def recommend_events(user_id, top_n=10):
     logger.info(f"Starting recommendation process for user {user_id}")
     try:
         # Get user preferences
-        user_preferences = get_user_preferences(user_id)
+        preferences = get_user_preferences(user_id)
         
         # Get user's interaction data
         df = get_interactions()
-        user_event_matrix = build_user_event_matrix(df)
+        interaction_matrix = build_user_event_matrix(df)
 
         # Check for cold start scenario
-        if user_id not in user_event_matrix.index or user_event_matrix.shape[0] < 3:
-            logger.info(f"Users in matrix: {list(user_event_matrix.index)}")
-            logger.info(f"Not enough users to compute similarity. Returning top-rated events.")
-            top_events = df[df['rating'] == 1]['event_id'].value_counts().head(top_n).index.tolist()
-            return top_events
+        if user_id not in interaction_matrix.index or interaction_matrix.shape[0] < 2:
+            logger.info(f"Cold start for user {user_id}. Ranking by preferences + top events.")
 
-        # Calculate base recommendations using collaborative filtering
-        logger.info(f"Calculating cosine similarity for user-event matrix of shape {user_event_matrix.shape}")
-        similarity = cosine_similarity(user_event_matrix)
+            # Score based on preferences
+            events = get_all_events()
+            content_scores = defaultdict(float)
+            for event in events:
+                score = 0
+                if preferences.get("eventCategories") and event["event_type"] in preferences["eventCategories"]:
+                    score += 1
+                if preferences.get("preferredTime") and preferences["preferredTime"] in str(event["start_time"]):
+                    score += 0.5
+                content_scores[event["id"]] = score
+
+            ranked = pd.Series(content_scores).sort_values(ascending=False)
+            return ranked.head(top_n).index.tolist()
+
+        # 1. Collaborative scores
+        logger.info(f"Calculating cosine similarity for user-event matrix of shape {interaction_matrix.shape}")
+        similarity = cosine_similarity(interaction_matrix)
         logger.info(f"Cosine similarity matrix calculated with shape {similarity.shape}")
-        user_idx = user_event_matrix.index.get_loc(user_id)
-        user_sim = similarity[user_idx]
+        target_idx = interaction_matrix.index.get_loc(user_id)
+        user_vecs = interaction_matrix.values
+        collab_scores = similarity[target_idx] @ user_vecs
+        collab_scores = pd.Series(collab_scores, index=interaction_matrix.columns)
 
-        weighted_scores = np.dot(user_sim, user_event_matrix.values)
-        event_scores = pd.Series(weighted_scores, index=user_event_matrix.columns)
-
-        # Get all events to adjust scores based on preferences
+        # 2. Content-based scores from profile
         events = get_all_events()
-        event_scores_dict = event_scores.to_dict()
-
-        # Adjust scores based on preferences that matter
+        content_scores = defaultdict(float)
         for event in events:
-            event_id = event['id']
-            if event_id in event_scores_dict:
-                score = event_scores_dict[event_id]
-                
-                # Only adjust score if preference matters
-                if user_preferences.get('timeMatters', True):
-                    if user_preferences.get('preferredTime') and event.get('start_time') == user_preferences.get('preferredTime'):
-                        score *= 1.2  # Boost score if time matches
-                
-                if user_preferences.get('locationMatters', True):
-                    if user_preferences.get('preferredLocation') and event.get('location') == user_preferences.get('preferredLocation'):
-                        score *= 1.2  # Boost score if location matches
-                
-                if user_preferences.get('typeMatters', True):
-                    if user_preferences.get('preferredType') and event.get('event_type') == user_preferences.get('preferredType'):
-                        score *= 1.2  # Boost score if event type matches
-                
-                event_scores_dict[event_id] = score
+            score = 0
+            if preferences.get("eventCategories") and event.get("event_type") in preferences["eventCategories"]:
+                score += 1
+            if preferences.get("preferredTime") and preferences["preferredTime"] in str(event.get("start_time")):
+                score += 0.5
+            if preferences.get("preferredDistance"):
+                score += 0.3  # fake location weighting if not implemented
+            # You can add budget, size, etc. here
+            content_scores[event["id"]] = score
+        content_scores = pd.Series(content_scores)
 
-        # Convert back to Series and sort
-        event_scores = pd.Series(event_scores_dict)
+        # 3. Combine scores — this is your hybrid logic
+        combined_scores = 0.7 * collab_scores.add(0, fill_value=0) + 0.3 * content_scores.add(0, fill_value=0)
+
+        # Remove already seen events
         seen_events = set(df[df['user_id'] == user_id]['event_id'])
-        recommendations = event_scores.drop(labels=seen_events).sort_values(ascending=False).head(top_n)
+        recommendations = combined_scores.drop(labels=seen_events, errors='ignore').sort_values(ascending=False).head(top_n)
 
         # If we don't have enough recommendations, add popular events
         if len(recommendations) < top_n:
