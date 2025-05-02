@@ -84,6 +84,7 @@ def build_event_content_matrix(events):
 
 # Recommend events for a user
 def recommend_events(user_id, top_n=10):
+    user_id = int(user_id)  # Ensure user_id is always an int for indexing
     logger.info(f"Starting recommendation process for user {user_id}")
     try:
         # Get user preferences
@@ -94,7 +95,7 @@ def recommend_events(user_id, top_n=10):
         interaction_matrix = build_user_event_matrix(df)
 
         # Check for cold start scenario
-        if int(user_id) not in interaction_matrix.index or interaction_matrix.loc[int(user_id)].sum() == 0:
+        if user_id not in interaction_matrix.index or interaction_matrix.loc[user_id].sum() == 0:
             logger.info(f"Cold start for user {user_id}. Ranking by preferences + top events.")
 
             # Score based on preferences
@@ -115,7 +116,7 @@ def recommend_events(user_id, top_n=10):
         logger.info(f"Calculating cosine similarity for user-event matrix of shape {interaction_matrix.shape}")
         similarity = cosine_similarity(interaction_matrix)
         logger.info(f"Cosine similarity matrix calculated with shape {similarity.shape}")
-        target_idx = interaction_matrix.index.get_loc(user_id)
+        target_idx = interaction_matrix.index.get_loc(user_id)  # ✅ Will now work correctly
         user_vecs = interaction_matrix.values
         collab_scores = similarity[target_idx] @ user_vecs
         collab_scores = pd.Series(collab_scores, index=interaction_matrix.columns)
