@@ -188,6 +188,19 @@ def get_all_events():
         logger.error(f"Error fetching events: {e}")
         return []
 
+def getGoogleMapsEmbedUrl(location):
+    if not location or location == 'Unknown' or location == 'Miesto Neznáme' or location == 'Miesto neznáme':
+        # Default to Prešov if location is not provided
+        return "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2641.8383484567!2d21.2353986!3d48.9977246!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x473eed62a563a9ef%3A0xb18994e09e7a9e06!2sJarkov%C3%A1%203110%2F77%2C%20080%2001%20Pre%C5%A1ov!5e0!3m2!1ssk!2ssk!4v1709912345678!5m2!1ssk!2ssk"
+    
+    # Encode the location for use in the URL
+    encodedLocation = location.replace(' ', '+')
+    
+    # Create a Google Maps embed URL with the location
+    mapUrl = f"https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q={encodedLocation}&zoom=15"
+    
+    return mapUrl
+
 @app.route("/health", methods=["GET"])
 def health():
     logger.info("Health check requested")
@@ -238,11 +251,13 @@ def recommend():
         # Format the response with proper time handling
         formatted_events = []
         for event in events:
+            location = event[3] or 'Miesto Neznáme'
             formatted_event = {
                 'id': event[0],
                 'title': event[1],
                 'category': event[2],
-                'location': event[3],
+                'location': location,
+                'map_url': getGoogleMapsEmbedUrl(location),
                 'event_start_date': event[4].strftime('%Y-%m-%d') if event[4] else None,
                 'event_end_date': event[5].strftime('%Y-%m-%d') if event[5] else None,
                 'start_time': str(event[6]) if event[6] else None,
