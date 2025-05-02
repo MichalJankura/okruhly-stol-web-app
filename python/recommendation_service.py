@@ -74,6 +74,7 @@ def recommend_events(user_id, top_n=10):
 
         # Check for cold start scenario
         if user_id not in user_event_matrix.index or user_event_matrix.shape[0] < 2:
+            logger.info(f"Users in matrix: {list(user_event_matrix.index)}")
             logger.info(f"Not enough users to compute similarity. Returning top-rated events.")
             top_events = df[df['rating'] == 1]['event_id'].value_counts().head(top_n).index.tolist()
             return top_events
