@@ -45,7 +45,7 @@ def get_interactions():
                    user_id, event_id,
                    CASE WHEN action_type = 'interested' THEN 1 ELSE 0 END AS rating
             FROM user_event_interactions
-            ORDER BY user_id, event_id, timestamp DESC;
+            ORDER BY user_id, event_id, interaction_time DESC;
         """
         df = pd.read_sql_query(query, conn)
         logger.info(f"Retrieved {len(df)} interactions from database")
