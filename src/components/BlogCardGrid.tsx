@@ -1,6 +1,9 @@
 import React, { useState, useCallback, useMemo, useEffect } from "react";
-import { FaHeart, FaRegHeart, FaCheck, FaTimes, FaMapMarkerAlt, FaClock, FaSearch, FaFilter, FaChevronLeft, FaChevronRight, FaTimes as FaClose } from "react-icons/fa";
+import { FaHeart, FaRegHeart, FaCheck, FaTimes, FaMapMarkerAlt, FaClock, FaSearch, FaFilter, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { format } from "date-fns";
+import { sk } from "date-fns/locale";
+import EventModal from './EventModal';
+import { eventEmitter } from '../utils/events';
 
 interface BlogArticle {
   id: number;
@@ -23,6 +26,8 @@ interface BlogArticle {
 }
 
 const BlogCardGrid = () => {
+  // Visual feedback state for like/dislike
+  const [feedbackStates, setFeedbackStates] = useState<{ [eventId: number]: 'green' | 'red' | null }>({});
   const [favorites, setFavorites] = useState<number[]>([]);
   const [category, setCategory] = useState("Všetky kategórie");
   const [loading, setLoading] = useState(true);
@@ -43,18 +48,213 @@ const BlogCardGrid = () => {
   const [selectedEvent, setSelectedEvent] = useState<BlogArticle | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [filteredArticles, setFilteredArticles] = useState<BlogArticle[]>([]);
+  const [fadeOutEvents, setFadeOutEvents] = useState<number[]>([]);
+  // --- RECOMMENDATIONS ---
+  const [recommendedArticles, setRecommendedArticles] = useState<BlogArticle[]>([]);
+  const [user, setUser] = useState<any>(null);
+
+  // Helper function to get random events
+  const getRandomEvents = (events: BlogArticle[], count: number) => {
+    const shuffled = [...events].sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, count);
+  };
+
+  useEffect(() => {
+    const userData = localStorage.getItem('user');
+    setUser(userData ? JSON.parse(userData) : null);
+  }, []);
+
+  useEffect(() => {
+    const userData = JSON.parse(localStorage.getItem("user") || "{}");
+    const userId = userData.user_id || userData.id;
+    
+    const fetchRecommendations = async () => {
+      try {
+        const res = await fetch(`https://okruhly-stol-web-app-s9d9.onrender.com/api/recommendations?user_id=${userId}`);
+        const data = await res.json();
+        setRecommendedArticles(data);
+      } catch (err) {
+        console.error("Error fetching recommendations:", err);
+        setRecommendedArticles(getRandomEvents(allArticles, 10));
+      }
+    };
+
+    if (userId) {
+      fetchRecommendations();
+    }
+  }, [allArticles]);
+
+  // Listen for user changes (login/logout)
+  useEffect(() => {
+    const updateUser = () => {
+      const userData = localStorage.getItem('user');
+      setUser(userData ? JSON.parse(userData) : null);
+    };
+    if (eventEmitter && eventEmitter.subscribe) {
+      const unsubscribe = eventEmitter.subscribe('authChange', updateUser);
+      return () => unsubscribe();
+    } else {
+      window.addEventListener('storage', updateUser);
+      return () => window.removeEventListener('storage', updateUser);
+    }
+  }, []);
+
+  // Fetch favorites when user changes
+  useEffect(() => {
+    if (!user) {
+      setFavorites([]);
+      return;
+    }
+    const userId = user.user_id || user.id;
+    if (!userId) {
+      setFavorites([]);
+      return;
+    }
+    fetch(`https://okruhly-stol-web-app-s9d9.onrender.com/api/favorites?user_id=${userId}`)
+      .then(res => res.json())
+      .then((data) => {
+        setFavorites(Array.isArray(data) ? data.map((fav: any) => fav.id) : []);
+      })
+      .catch(() => setFavorites([]));
+  }, [user]);
 
   const toggleFavorite = useCallback((eventId: number) => {
-    setFavorites(prev => 
-      prev.includes(eventId) 
-        ? prev.filter(id => id !== eventId)
-        : [...prev, eventId]
-    );
-  }, []);
+    if (!user) return;
+    const userId = user.user_id || user.id;
+    if (!userId) return;
+    if (favorites.includes(eventId)) {
+      // Remove favorite
+      fetch('https://okruhly-stol-web-app-s9d9.onrender.com/api/favorites', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, event_id: eventId })
+      })
+        .then(res => {
+          if (res.ok) setFavorites(prev => prev.filter(id => id !== eventId));
+        });
+    } else {
+      // Add favorite
+      fetch('https://okruhly-stol-web-app-s9d9.onrender.com/api/favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, event_id: eventId })
+      })
+        .then(res => {
+          if (res.ok) setFavorites(prev => [...prev, eventId]);
+        });
+    }
+  }, [favorites, user]);
 
   const handleRecommendation = useCallback((eventId: number, isInterested: boolean) => {
-    console.log(`User ${isInterested ? "interested in" : "not interested in"} event ${eventId}`);
-  }, []);
+    setFeedbackStates(prev => {
+      console.log("Setting feedback for", eventId, isInterested ? "green" : "red");
+      return { ...prev, [eventId]: isInterested ? "green" : "red" };
+    });
+    setFadeOutEvents(prev => [...prev, eventId]);
+    
+    const userData = JSON.parse(localStorage.getItem("user") || "{}");
+    const userId = userData.user_id || userData.id;
+    
+    if (!userId) {
+      console.error('No user ID found when trying to handle recommendation');
+      return;
+    }
+
+    console.log('Handling recommendation:', { userId, eventId, isInterested });
+
+    // Find the event type (category) for this event
+    const event = Array.isArray(recommendedArticles) 
+      ? recommendedArticles.find(e => e.id === eventId) 
+      : null;
+    const eventType = event?.category || "Unknown";
+
+    console.log('Event type found:', eventType);
+
+    // Log interaction
+    fetch("https://okruhly-stol-web-app-s9d9.onrender.com/api/interactions", {
+      method: "POST",
+      body: JSON.stringify({
+        user_id: userId,
+        event_id: eventId,
+        action_type: isInterested ? "interested" : "not_interested"
+      }),
+      headers: {
+        "Content-Type": "application/json"
+      }
+    })
+    .then((res: Response) => res.json())
+    .then((data: any) => {
+      console.log('Interaction logged:', data);
+      // Update preference weight
+      return fetch("https://okruhly-stol-web-app-s9d9.onrender.com/api/update-weight", {
+        method: "POST",
+        body: JSON.stringify({
+          user_id: userId,
+          event_type: eventType,
+          liked: isInterested
+        }),
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+    })
+    .then((res: Response) => res.json())
+    .then((data: any) => {
+      console.log('Weight updated:', data);
+      // Remove the event after animation completes
+      setTimeout(() => {
+        setRecommendedArticles(prev => Array.isArray(prev) ? prev.filter(article => article.id !== eventId) : []);
+        setFadeOutEvents(prev => prev.filter(id => id !== eventId));
+        
+        // Fetch a new recommendation
+        fetch(`https://okruhly-stol-web-app-s9d9.onrender.com/api/recommendations?user_id=${userId}`)
+          .then(res => res.json())
+          .then(data => {
+            if (Array.isArray(data) && data.length > 0) {
+              // Get the first recommendation that's not already shown
+              const currentIds = new Set(Array.isArray(recommendedArticles) ? recommendedArticles.map(article => article.id) : []);
+              const newRecommendation = data.find((rec: any) => !currentIds.has(rec.id));
+              if (newRecommendation) {
+                setRecommendedArticles(prev => Array.isArray(prev) ? [...prev, newRecommendation] : [newRecommendation]);
+              } else {
+                // If no new recommendations, get a random event
+                const availableEvents = Array.isArray(allArticles) ? allArticles.filter(article => !currentIds.has(article.id)) : [];
+                const randomEvent = getRandomEvents(availableEvents, 1)[0];
+                if (randomEvent) {
+                  setRecommendedArticles(prev => Array.isArray(prev) ? [...prev, randomEvent] : [randomEvent]);
+                }
+              }
+            }
+          })
+          .catch(error => {
+            console.error('Error fetching new recommendation:', error);
+            // On error, get a random event
+            const currentIds = new Set(Array.isArray(recommendedArticles) ? recommendedArticles.map(article => article.id) : []);
+            const availableEvents = Array.isArray(allArticles) ? allArticles.filter(article => !currentIds.has(article.id)) : [];
+            const randomEvent = getRandomEvents(availableEvents, 1)[0];
+            if (randomEvent) {
+              setRecommendedArticles(prev => Array.isArray(prev) ? [...prev, randomEvent] : [randomEvent]);
+            }
+          });
+      }, 500);
+    })
+    .catch((error: Error) => {
+      console.error('Error in recommendation flow:', error);
+      // Even if there's an error, still remove the event and try to get a new one
+      setTimeout(() => {
+        setRecommendedArticles(prev => Array.isArray(prev) ? prev.filter(article => article.id !== eventId) : []);
+        setFadeOutEvents(prev => prev.filter(id => id !== eventId));
+        
+        // Get a random event as fallback
+        const currentIds = new Set(Array.isArray(recommendedArticles) ? recommendedArticles.map(article => article.id) : []);
+        const availableEvents = Array.isArray(allArticles) ? allArticles.filter(article => !currentIds.has(article.id)) : [];
+        const randomEvent = getRandomEvents(availableEvents, 1)[0];
+        if (randomEvent) {
+          setRecommendedArticles(prev => Array.isArray(prev) ? [...prev, randomEvent] : [randomEvent]);
+        }
+      }, 500);
+    });
+  }, [recommendedArticles, allArticles]);
 
   // Fetch articles on component mount
   useEffect(() => {
@@ -235,10 +435,13 @@ const BlogCardGrid = () => {
             </button>
             <div className="w-[360px] sm:w-full mx-auto sm:mx-0">
               <div className="flex flex-row overflow-x-auto hide-scrollbar sm:gap-3 gap-3  pb-4 w-full scroll-container">
-                {allArticles.slice(0, 10).map((event) => (
+                {(recommendedArticles.length > 0 ? recommendedArticles : getRandomEvents(allArticles, 10)).map((event) => (
                   <div 
                     key={event.id}
-                    className="w-[360px] sm:w-[320px] flex-none max-w-[400px] mx-auto sm:mx-0 bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition-shadow flex flex-col"
+                    className={`w-[360px] sm:w-[320px] flex-none max-w-[400px] mx-auto sm:mx-0 bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-lg transition-shadow flex flex-col
+                      ${fadeOutEvents.includes(event.id) ? 'opacity-0 transform scale-95 transition-all duration-500' : ''}
+                      ${feedbackStates[event.id] === 'green' ? 'bg-lime-100' : feedbackStates[event.id] === 'red' ? 'bg-red-100' : ''}
+                    `}
                   >
                     <div className="relative h-48">
                       <img
@@ -262,7 +465,10 @@ const BlogCardGrid = () => {
                       <h3 className="text-[14px] font-semibold text-[#020817] mb-2">{event.title}</h3>
                       <div className="flex items-center gap-2 text-[#6D7074] mb-2">
                         <FaClock />
-                        <span>{format(new Date(event.event_start_date || event.date), "MMM d, yyyy")}</span>
+                        <span>
+                          {format(new Date(event.event_start_date || event.date), "d. MMMM yyyy", { locale: sk })}
+                          {event.event_end_date && event.event_end_date !== event.event_start_date && ` - ${format(new Date(event.event_end_date), "d. MMMM yyyy", { locale: sk })}`}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2 text-[#6D7074] mb-2">
                         <FaMapMarkerAlt />
@@ -428,7 +634,10 @@ const BlogCardGrid = () => {
                     <h3 className="text-[14px] font-semibold text-[#020817] mb-2">{event.title}</h3>
                     <div className="flex items-center gap-2 text-[#6D7074] mb-2">
                       <FaClock />
-                      <span>{format(new Date(event.event_start_date || event.date), "MMM d, yyyy")}</span>
+                      <span>
+                        {format(new Date(event.event_start_date || event.date), "d. MMMM yyyy", { locale: sk })}
+                        {event.event_end_date && event.event_end_date !== event.event_start_date && ` - ${format(new Date(event.event_end_date), "d. MMMM yyyy", { locale: sk })}`}
+                      </span>
                     </div>
                     <div className="flex items-center gap-2 text-[#6D7074] mb-2">
                       <FaMapMarkerAlt />
@@ -493,96 +702,6 @@ const BlogCardGrid = () => {
             scrollbar-width: none;
           }
         `}</style>
-      </div>
-    </div>
-  );
-};
-
-// EventModal component
-const EventModal = ({ event, onClose }: { event: BlogArticle; onClose: () => void }) => {
-  // Use the map_url from the event object, but if location is "Miesto neznáme", use Prešov map
-  const presovMapUrl = "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2641.8383484567!2d21.2353986!3d48.9977246!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x473eed62a563a9ef%3A0xb18994e09e7a9e06!2sJarkov%C3%A1%203110%2F77%2C%20080%2001%20Pre%C5%A1ov!5e0!3m2!1ssk!2ssk!4v1709912345678!5m2!1ssk!2ssk";
-  const mapUrl = event.location === "Miesto neznáme" || event.location === "Miesto Neznáme" 
-    ? presovMapUrl 
-    : (event.map_url || presovMapUrl);
-  
-  // Debug log for map URL in modal
-  console.log(`[DEBUG] Using map URL in modal for event "${event.title}" with location "${event.location}": ${mapUrl}`);
-  
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-y-auto hide-scrollbar">
-        <div className="relative">
-          <button
-            onClick={onClose}
-            className="absolute right-4 top-4 z-10 p-2 bg-white rounded-full shadow-lg"
-          >
-            <FaClose className="text-[#0D6EFD]" />
-          </button>
-          <img
-            src={event.image}
-            alt={event.title}
-            className="w-full h-[300px] object-cover rounded-t-lg"
-          />
-        </div>
-        <div className="p-6">
-          <h2 className="text-2xl font-bold text-[#020817] mb-4">{event.title}</h2>
-          
-          <div className="flex flex-col gap-3 mb-6">
-            <div className="flex items-center gap-2 text-[#6D7074]">
-              <FaClock />
-              <span>{format(new Date(event.event_start_date || event.date), "MMMM d, yyyy")}</span>
-            </div>
-            {event.start_time && (
-              <div className="flex items-center gap-2 text-[#6D7074]">
-                <FaClock />
-                <span>{event.start_time} - {event.end_time || 'Koniec'}</span>
-              </div>
-            )}
-            <div className="flex items-center gap-2 text-[#6D7074]">
-              <FaMapMarkerAlt />
-              <span>{event.location}</span>
-            </div>
-            {event.category && (
-              <div className="flex items-center gap-2 text-[#6D7074]">
-                <FaFilter />
-                <span>{event.category}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="mb-6">
-            <h3 className="text-lg font-bold text-[#020817] mb-2">O podujatí</h3>
-            <p className="text-[#020817]">
-              {event.fullText || event.shortText}
-            </p>
-          </div>
-
-          <div className="mb-6">
-            <h3 className="text-lg font-bold text-[#020817] mb-2">Miesto konania</h3>
-            <div className="h-[300px] w-full rounded-lg overflow-hidden">
-              <iframe
-                src={mapUrl}
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                allowFullScreen
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                className="rounded-lg"
-              ></iframe>
-            </div>
-          </div>
-
-          {event.price !== undefined && event.price > 0 && (
-            <div className="flex justify-between items-center pt-4 border-t border-[#E0E0E0]">
-              <span className="text-xl font-semibold text-[#0D6EFD]">{event.price} €</span>
-              <button className="px-6 py-2 bg-[#0D6EFD] text-white rounded-lg hover:opacity-90 transition-opacity">
-                Rezervovať
-              </button>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
