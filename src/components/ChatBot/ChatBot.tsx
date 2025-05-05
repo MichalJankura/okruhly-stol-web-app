@@ -6,10 +6,10 @@ export default function ChatBot() {
   const [lastScrollY, setLastScrollY] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState([
-    { role: "ai", content: "Hi, how can I help you today?" },
+    { role: "assistant", content: "Hi, how can I help you today?" },
     { role: "user", content: "fewafef" },
     {
-      role: "ai",
+      role: "assistant",
       content:
         "Sorry, I couldn't find any information in the documentation about that. Expect answer to be less accurate.",
     },
@@ -18,7 +18,6 @@ export default function ChatBot() {
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  // Scroll efekt – skry/ukáž bublinu
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
@@ -34,7 +33,6 @@ export default function ChatBot() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
-  // ⬇️ Auto scroll to bottom
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
@@ -67,14 +65,14 @@ export default function ChatBot() {
       } else {
         setMessages((prev) => [
           ...prev,
-          { role: "ai", content: "Hmm... AI didn't return a response." },
+          { role: "assistant", content: "Hmm... AI didn't return a response." },
         ]);
       }
     } catch (error) {
       console.error(error);
       setMessages((prev) => [
         ...prev,
-        { role: "ai", content: "There was an error contacting the AI." },
+        { role: "assistant", content: "There was an error contacting the AI." },
       ]);
     } finally {
       setIsLoading(false);
@@ -83,7 +81,6 @@ export default function ChatBot() {
 
   return (
     <>
-      {/* Floating Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={`fixed z-50 bottom-4 right-4 inline-flex items-center justify-center text-sm font-medium border rounded-full w-16 h-16 bg-black hover:bg-gray-700 text-white transition-all duration-300 ${
@@ -105,20 +102,14 @@ export default function ChatBot() {
         </svg>
       </button>
 
-     {/* Chat Window */}
-     {isOpen && (
-  <div className="fixed z-50 bottom-[calc(4rem+1.5rem)] right-2 sm:right-4 bg-white p-4 sm:p-6 rounded-lg border border-gray-200 w-[95vw] max-w-md h-[90vh] shadow-md flex flex-col flex-1 overflow-y-auto pr-2 space-y-4 max-h-[calc(100%-140px)]">
-          {/* Header */}
+      {isOpen && (
+        <div className="fixed z-50 bottom-[calc(4rem+1.5rem)] right-2 sm:right-4 bg-white p-4 sm:p-6 rounded-lg border border-gray-200 w-[95vw] max-w-md h-[90vh] shadow-md flex flex-col flex-1 overflow-y-auto pr-2 space-y-4 max-h-[calc(100%-140px)]">
           <div className="pb-6">
             <h2 className="font-semibold text-lg">Chatbot</h2>
             <p className="text-sm text-gray-500">Powered by Mendable and Vercel</p>
           </div>
 
-          {/* Messages */}
-          <div
-            ref={chatContainerRef}
-            className="flex-1 overflow-y-auto pr-2 space-y-4"
-          >
+          <div ref={chatContainerRef} className="flex-1 overflow-y-auto pr-2 space-y-4">
             {messages.map((msg, idx) => (
               <div key={idx} className="flex gap-3 text-sm text-gray-600">
                 <span className="flex shrink-0 overflow-hidden rounded-full w-8 h-8">
@@ -188,7 +179,6 @@ export default function ChatBot() {
             )}
           </div>
 
-          {/* Input */}
           <form onSubmit={sendMessage} className="flex items-center pt-4 space-x-2">
             <input
               className="flex h-10 w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400"
