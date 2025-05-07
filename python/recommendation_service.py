@@ -12,6 +12,11 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import MultiLabelBinarizer
 from collections import defaultdict
 
+# Tunable weights for hybrid recommendation
+CONTENT_WEIGHT = 0.3
+COLLAB_WEIGHT = 0.6
+POPULAR_WEIGHT = 0.1
+
 app = Flask(__name__)
 
 # Setup logging
@@ -137,7 +142,20 @@ def recommend_events(user_id, top_n=10):
         content_scores = pd.Series(content_scores)
 
         # 3. Combine scores — this is your hybrid logic
-        combined_scores = 0.7 * collab_scores.add(0, fill_value=0) + 0.3 * content_scores.add(0, fill_value=0)
+        def normalize(scores):
+            return (scores - scores.min()) / (scores.max() - scores.min() + 1e-6)
+
+        collab_scores = normalize(collab_scores)
+        content_scores = normalize(content_scores)
+
+        # Add fallback popular score if needed (currently empty, but can be filled if added)
+        popular_scores = pd.Series(0, index=collab_scores.index)
+
+        combined_scores = (
+            COLLAB_WEIGHT * collab_scores.add(0, fill_value=0) +
+            CONTENT_WEIGHT * content_scores.add(0, fill_value=0) +
+            POPULAR_WEIGHT * popular_scores.add(0, fill_value=0)
+        )
 
         # Remove already seen events
         seen_events = set(df[df['user_id'] == user_id]['event_id'])
