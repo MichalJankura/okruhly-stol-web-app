@@ -1,25 +1,23 @@
-type Callback = () => void;
+type EventCallback = (...args: any[]) => void;
 
 class EventEmitter {
-  private listeners: { [key: string]: Callback[] } = {};
+  private events: { [key: string]: EventCallback[] } = {};
 
-  subscribe(event: string, callback: Callback) {
-    if (!this.listeners[event]) {
-      this.listeners[event] = [];
+  subscribe(event: string, callback: EventCallback) {
+    if (!this.events[event]) {
+      this.events[event] = [];
     }
-    this.listeners[event].push(callback);
-    
-    // Return unsubscribe function
+    this.events[event].push(callback);
     return () => {
-      if (this.listeners[event]) {
-        this.listeners[event] = this.listeners[event].filter(cb => cb !== callback);
+      if (this.events[event]) {
+        this.events[event] = this.events[event].filter(cb => cb !== callback);
       }
     };
   }
 
-  emit(event: string) {
-    if (this.listeners[event]) {
-      this.listeners[event].forEach(callback => callback());
+  emit(event: string, ...args: any[]) {
+    if (this.events[event]) {
+      this.events[event].forEach(callback => callback(...args));
     }
   }
 }
