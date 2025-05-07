@@ -71,6 +71,7 @@ const Profile = () => {
     password: ""
   });
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+  const [locationStatus, setLocationStatus] = useState<string>('');
 
   // Use useEffect to set isClient to true after component mounts
   useEffect(() => {
@@ -153,6 +154,68 @@ const Profile = () => {
       console.log('No user data found in localStorage');
     }
   }, [isClient]);
+
+  // Add geolocation effect
+  useEffect(() => {
+    if (!isClient || !user) return;
+
+    if ("geolocation" in navigator) {
+      setLocationStatus('requesting');
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+          const userId = user?.user_id || user?.id;
+          if (userId) {
+            try {
+              const response = await fetch('https://okruhly-stol-web-app-s9d9.onrender.com/api/update-location', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: userId, latitude, longitude })
+              });
+              
+              if (response.ok) {
+                setLocationStatus('success');
+                setNotification({ message: 'Poloha bola úspešne aktualizovaná!', type: 'success' });
+              } else {
+                setLocationStatus('error');
+                setNotification({ message: 'Nepodarilo sa aktualizovať polohu.', type: 'error' });
+              }
+            } catch (error) {
+              setLocationStatus('error');
+              setNotification({ message: 'Chyba pri aktualizácii polohy.', type: 'error' });
+            }
+          }
+        },
+        (error: GeolocationPositionError) => {
+          setLocationStatus('error');
+          let errorMessage = 'Nepodarilo sa získať vašu polohu.';
+          
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = 'Prístup k poloze bol zamietnutý. Prosím, povolte prístup k poloze v nastaveniach prehliadača.';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = 'Informácie o polohe nie sú dostupné.';
+              break;
+            case error.TIMEOUT:
+              errorMessage = 'Vypršal časový limit na získanie polohy.';
+              break;
+          }
+          
+          setNotification({ 
+            message: errorMessage,
+            type: 'error' 
+          });
+        }
+      );
+    } else {
+      setLocationStatus('not-supported');
+      setNotification({ 
+        message: 'Vaš prehliadač nepodporuje geolokáciu.', 
+        type: 'error' 
+      });
+    }
+  }, [user, isClient]);
 
   // Auto-hide notification after 3 seconds
   useEffect(() => {
@@ -322,6 +385,12 @@ const Profile = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto bg-card rounded-lg shadow-lg p-6">
           <h1 className="text-heading font-heading text-foreground mb-8">Nastavenia profilu</h1>
+
+          {locationStatus === 'requesting' && (
+            <div className="mb-4 p-4 bg-blue-100 text-blue-700 rounded-md">
+              Získavam vašu polohu...
+            </div>
+          )}
 
           <form onSubmit={handleSubmit}>
             <div className="mb-8">
