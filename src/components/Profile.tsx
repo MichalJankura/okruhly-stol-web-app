@@ -5,12 +5,9 @@ interface PreferencesState {
   preferredTime: string;
   preferredDistance: string;
   budgetRange: string;
-  eventSize: string;
-  additionalNotes: string;
   timeMatters: boolean;
   distanceMatters: boolean;
   budgetMatters: boolean;
-  sizeMatters: boolean;
 }
 
 interface PreferencesAction {
@@ -24,12 +21,9 @@ const initialState: PreferencesState = {
   preferredTime: "",
   preferredDistance: "0-5",
   budgetRange: "free",
-  eventSize: "",
-  additionalNotes: "",
   timeMatters: true,
   distanceMatters: true,
-  budgetMatters: true,
-  sizeMatters: true
+  budgetMatters: true
 };
 
 function preferencesReducer(state: PreferencesState, action: PreferencesAction): PreferencesState {
@@ -111,12 +105,9 @@ const Profile = () => {
                 preferredTime: "",
                 preferredDistance: "0-5",
                 budgetRange: "free",
-                eventSize: "",
-                additionalNotes: "",
                 timeMatters: true,
                 distanceMatters: true,
-                budgetMatters: true,
-                sizeMatters: true
+                budgetMatters: true
               };
 
               // If the response is an array of event categories
@@ -323,12 +314,9 @@ const Profile = () => {
           preferredTime: preferences.preferredTime,
           preferredDistance: preferences.preferredDistance,
           budgetRange: preferences.budgetRange,
-          eventSize: preferences.eventSize,
-          additionalNotes: preferences.additionalNotes,
           timeMatters: preferences.timeMatters,
           distanceMatters: preferences.distanceMatters,
-          budgetMatters: preferences.budgetMatters,
-          sizeMatters: preferences.sizeMatters
+          budgetMatters: preferences.budgetMatters
         };
         
         console.log('Saving preferences with payload:', payload);
@@ -567,10 +555,10 @@ const Profile = () => {
                       className="w-full p-3 border rounded-md bg-background"
                       disabled={!preferences.distanceMatters}
                     >
-                      <option value="0-5">0-5 km</option>
-                      <option value="5-15">5-15 km</option>
-                      <option value="15-30">15-30 km</option>
-                      <option value="30+">30+ km</option>
+                      <option value="0-5">0 – 5 km</option>
+                      <option value="5-20">5 – 20 km</option>
+                      <option value="20-35">20 – 35 km</option>
+                      <option value="35+">35+ km</option>
                     </select>
                     <label className="inline-flex items-center">
                       <input
@@ -620,53 +608,6 @@ const Profile = () => {
                       <span className="ml-2">Nezáleží</span>
                     </label>
                   </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">Veľkosť podujatia</label>
-                  <div className="space-y-2">
-                    <div className="space-x-4">
-                      {["Malé", "Stredné", "Veľké"].map((size) => (
-                        <label key={size} className="inline-flex items-center">
-                          <input
-                            type="radio"
-                            value={size.toLowerCase()}
-                            checked={preferences.eventSize === size.toLowerCase()}
-                            onChange={(e) => dispatch({ type: "UPDATE_FIELD", field: "eventSize", value: e.target.value })}
-                            className="form-radio"
-                            disabled={!preferences.sizeMatters}
-                          />
-                          <span className="ml-2">{size}</span>
-                        </label>
-                      ))}
-                    </div>
-                    <label className="inline-flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={!preferences.sizeMatters}
-                        onChange={(e) => {
-                          const isChecked = !e.target.checked;
-                          dispatch({ type: "UPDATE_FIELD", field: "sizeMatters", value: isChecked });
-                          if (!isChecked) {
-                            dispatch({ type: "UPDATE_FIELD", field: "eventSize", value: "" });
-                          }
-                        }}
-                        className="form-checkbox"
-                      />
-                      <span className="ml-2">Nezáleží</span>
-                    </label>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">Dodatočné poznámky</label>
-                  <textarea
-                    value={preferences.additionalNotes}
-                    onChange={(e) => dispatch({ type: "UPDATE_FIELD", field: "additionalNotes", value: e.target.value })}
-                    placeholder="Zdieľajte ďalšie záujmy"
-                    className="w-full p-3 border rounded-md bg-background"
-                    rows={4}
-                  />
                 </div>
               </div>
             </div>
