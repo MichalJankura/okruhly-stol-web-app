@@ -687,22 +687,8 @@ app.get('/api/favorites', async (req, res) => {
             return res.status(400).json({ error: 'Missing user_id parameter' });
         }
 
-        // Migrate old favorites from user_event_interactions to user_favorites
-        await pool.query(`
-            INSERT INTO user_favorites (user_id, event_id, favorited_at)
-            SELECT 
-                user_id, 
-                event_id, 
-                COALESCE(MAX(interaction_time), CURRENT_TIMESTAMP)
-            FROM user_event_interactions
-            WHERE action_type = 'interested' AND user_id = $1
-            AND NOT EXISTS (
-                SELECT 1 FROM user_favorites uf
-                WHERE uf.user_id = user_event_interactions.user_id
-                  AND uf.event_id = user_event_interactions.event_id
-            )
-            GROUP BY user_id, event_id;
-        `, [userId]);
+        // Removed migration from user_event_interactions to user_favorites
+        // Only the heart button (POST/DELETE) will control favorites
 
         const query = `
             SELECT e.* FROM events e
