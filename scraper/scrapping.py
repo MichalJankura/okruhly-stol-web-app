@@ -4,6 +4,23 @@ import re
 from bs4 import BeautifulSoup
 from datetime import datetime
 
+def geocode_location(location):
+    try:
+        url = f"https://nominatim.openstreetmap.org/search"
+        params = {
+            "q": location,
+            "format": "json",
+            "limit": 1
+        }
+        headers = {"User-Agent": "okruhly-stol-app"}
+        response = requests.get(url, params=params, headers=headers)
+        data = response.json()
+        if data:
+            return float(data[0]["lat"]), float(data[0]["lon"])
+    except Exception as e:
+        print(f"Error geocoding {location}: {e}")
+    return None, None
+
 conn = psycopg2.connect(
     dbname="neondb",
     user="neondb_owner",
@@ -103,20 +120,14 @@ def push_event_to_db(events_data):
     with conn.cursor() as cur:
         today = datetime.today().date()  # Get today's date as datetime.date object
         for event in events_data:
-            title, event_type, event_location, start_date, end_date, start_time, end_time, tickets, description, link_to, image_url = event
+            title, event_type, event_location, start_date, end_date, start_time, end_time, tickets, description, link_to, image_url, latitude, longitude = event
             
-            # Convert dates to datetime objects for comparison
-            try:
-                if start_date:
-                    start_date_dt = datetime.strptime(start_date, "%d.%m.%Y").date()
-                    start_date = start_date_dt.strftime("%Y-%m-%d")
-                if end_date:
-                    end_date_dt = datetime.strptime(end_date, "%d.%m.%Y").date()
-                    end_date = end_date_dt.strftime("%Y-%m-%d")
-            except ValueError:
-                print(f"Invalid date format: {start_date} or {end_date}")
-                continue
-
+            # Convert dates from dd.mm.yyyy to yyyy-mm-dd format
+            if start_date:
+                start_date = datetime.strptime(start_date, "%d.%m.%Y").strftime("%Y-%m-%d")
+            if end_date:
+                end_date = datetime.strptime(end_date, "%d.%m.%Y").strftime("%Y-%m-%d")
+            
             # Skip events with dates older than today
             if start_date and datetime.strptime(start_date, "%Y-%m-%d").date() < today:
                 continue
@@ -153,24 +164,31 @@ def push_event_to_db(events_data):
                     earliest_date = min(all_dates).strftime("%Y-%m-%d")
                     latest_date = max(all_dates).strftime("%Y-%m-%d")
 
-                    # Update the first matching event with new dates
+                    # Update the first matching event with new dates and location coordinates
                     cur.execute(
                         '''UPDATE events 
-                           SET event_start_date = %s, event_end_date = %s
+                           SET event_start_date = %s, 
+                               event_end_date = %s,
+                               latitude = %s,
+                               longitude = %s
                            WHERE id = (
                                SELECT id FROM events 
                                WHERE title = %s AND event_type = %s
                                ORDER BY id
                                LIMIT 1
                            )''',
-                        (earliest_date, latest_date, title, event_type)
+                        (earliest_date, latest_date, latitude, longitude, title, event_type)
                     )
             else:
-                # No matching events found, insert new event
+                # No matching events found, insert new event with location coordinates
                 cur.execute(
-                    '''INSERT INTO events (title, event_type, location, event_start_date, event_end_date, start_time, end_time, tickets, description, link_to, image_url) 
-                       VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''',
-                    (title, event_type, event_location, start_date, end_date, start_time, end_time, tickets, description, link_to, image_url)
+                    '''INSERT INTO events (
+                        title, event_type, location, event_start_date, event_end_date, 
+                        start_time, end_time, tickets, description, link_to, image_url,
+                        latitude, longitude
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)''',
+                    (title, event_type, event_location, start_date, end_date, start_time, 
+                     end_time, tickets, description, link_to, image_url, latitude, longitude)
                 )
         conn.commit()
     print(f'{len(events_data)} podujatí bolo spracovaných.')
@@ -197,6 +215,10 @@ def sl_scrap():
                         title = title_div.find('h2').text.strip() if title_div else 'Názov neznámy'
                         event_type = event_detail.find('dt', string='Typ podujatia:').find_next('dd').text.strip() if event_detail.find('dt', string='Typ podujatia:') else 'Typ neznámy'
                         event_location = event_detail.find('dt', string='Miesto podujatia:').find_next('dd').text.strip() if event_detail.find('dt', string='Miesto podujatia:') else 'Miesto neznáme'
+                        
+                        # Geocode the location
+                        latitude, longitude = geocode_location(event_location)
+                        
                         event_date_raw = event_detail.find('dt', string='Dátum konania:').find_next('dd').text.strip() if event_detail.find('dt', string='Dátum konania:') else 'Dátum neznámy'
                         date_matches = re.findall(r'(\d{2}\.\d{2}\.\d{4})', event_date_raw)
                         start_date, end_date = None, None
@@ -216,7 +238,7 @@ def sl_scrap():
                         if img_tag and img_tag.get('src'):
                             image_url_part1 = img_tag['src']
                             image_url = f'{url_event}{image_url_part1}'
-                        events_data.append((title, event_type, event_location, start_date, end_date, start_time, end_time, tickets, description, link_to, image_url))
+                        events_data.append((title, event_type, event_location, start_date, end_date, start_time, end_time, tickets, description, link_to, image_url, latitude, longitude))
     else:
         print(f'Chyba pri načítaní stránky. Status kód: {response.status_code}')
     return events_data
@@ -225,11 +247,9 @@ def gopresov_scrap():
     url = 'https://www.gopresov.sk/podujatia/kalendar-podujati/'
     response = requests.get(url)
     events_data = []
-    # print(f"Starting gopresov_scrap with {len(events_data)} events")
     if response.status_code == 200:
         soup = BeautifulSoup(response.content, 'html.parser')
         events = soup.find_all('h4', class_='mec-event-title')
-        # print(f"Found {len(events)} potential events")
         for event in events:
             try:
                 a_tag = event.find('a')
@@ -240,16 +260,13 @@ def gopresov_scrap():
                     if date_match:
                         event_date = datetime.strptime(date_match.group(1), '%Y-%m-%d')
                         if event_date < datetime.today():
-                            # print(f"Skipping event - past date: {event_date}")
                             continue
                     response = requests.get(href)
                     if response.status_code == 200:
                         soup = BeautifulSoup(response.content, 'html.parser')
                         event_date_unformatted = soup.find('span', class_ = 'mec-start-date-label').text.strip() if soup.find('span', class_ = 'mec-start-date-label') else 'Dátum neznámy'
-                        # print(f"Processing event with date: {event_date_unformatted}")
                         event_date_raw = parse_date(event_date_unformatted)
                         if not is_valid_date(event_date_raw):
-                            # print(f"Skipping event - invalid date: {event_date_raw}")
                             continue
                         date_matches = re.findall(r'(\d{2}\.\d{2}\.\d{4})', event_date_raw)
                         start_date, end_date = None, None
@@ -274,6 +291,10 @@ def gopresov_scrap():
                             start_time = None
                             end_time = None
                         event_location = soup.find('span', class_ = 'mec-address').text.strip() if soup.find('span', class_ = 'mec-address') else 'Miesto neznáme'
+                        
+                        # Geocode the location
+                        latitude, longitude = geocode_location(event_location)
+                        
                         event_type_element= soup.find('dd', class_ ='mec-events-event-categories')
                         if event_type_element:
                             event_type = event_type_element.find('a').text.strip() if event_type_element.find('a') else 'Kategória neznáma'
@@ -286,14 +307,11 @@ def gopresov_scrap():
                             img_tag = img_div.find('img')
                             if img_tag and img_tag.get('src'):
                                 image_url = img_tag['src']
-                        events_data.append((title, event_type, event_location, start_date, end_date, start_time, end_time, tickets, description, link_to, image_url))
-                        # print(f"Added event: {title}")
+                        events_data.append((title, event_type, event_location, start_date, end_date, start_time, end_time, tickets, description, link_to, image_url, latitude, longitude))
             except Exception as e:
-                # print(f"Error processing event: {str(e)}")
                 continue
     else:
         print(f'Chyba pri načítaní stránky. Status kód: {response.status_code}')
-    # print(f"Finished gopresov_scrap with {len(events_data)} events")
     return events_data
 
 def extract_info_from_date(date_div):
@@ -318,6 +336,10 @@ def severovychod_scrap():
         events = soup.find_all('a',class_ ='ct-link side-slider-slide-link')
         for event in events[1:]:
             event_location = event.find('div',class_='ct-text-block event-card-venue-txt').text.strip()
+            
+            # Geocode the location
+            latitude, longitude = geocode_location(event_location)
+            
             href = event.get('href')
             response = requests.get(href)
             link_to = href
@@ -369,8 +391,7 @@ def severovychod_scrap():
                         if "data:image/svg+xml" in image_url:
                             if img_tag.get('data-lazy-src'):
                                 image_url = img_tag['data-lazy-src']
-                # print(image_url)
-                events_data.append((title, event_type, event_location, start_date, end_date, start_time, end_time, tickets, description, link_to, image_url))
+                events_data.append((title, event_type, event_location, start_date, end_date, start_time, end_time, tickets, description, link_to, image_url, latitude, longitude))
     else:
         print(f'Chyba pri načítaní stránky. Status kód: {response.status_code}')
     return events_data
