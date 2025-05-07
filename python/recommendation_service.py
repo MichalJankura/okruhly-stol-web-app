@@ -15,6 +15,7 @@ from math import radians, cos, sin, asin, sqrt
 CONTENT_WEIGHT = 0.3
 COLLAB_WEIGHT = 0.6
 POPULAR_WEIGHT = 0.1
+DISTANCE_WEIGHT = 0.3  # Weight for distance penalty
 
 app = Flask(__name__)
 
@@ -75,40 +76,55 @@ def get_user_location(user_id):
         logger.error(f"Error fetching user location: {e}")
         return None, None
 
-def filter_events_by_distance(event_ids, user_lat, user_lon, max_distance):
-    """Filter events by distance from user's location"""
-    if not event_ids or user_lat is None or user_lon is None:
-        return event_ids
-        
+def get_event_coordinates(event_ids):
+    """Fetch coordinates for multiple events in one query"""
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Get coordinates for all events in one query
         placeholders = ','.join(['%s'] * len(event_ids))
         cursor.execute(
             f"SELECT id, latitude, longitude FROM events WHERE id IN ({placeholders})",
             event_ids
         )
-        events_coords = cursor.fetchall()
+        coords = {id: (lat, lon) for id, lat, lon in cursor.fetchall()}
         cursor.close()
         conn.close()
+        return coords
+    except Exception as e:
+        logger.error(f"Error fetching event coordinates: {e}")
+        return {}
+
+def apply_distance_penalty(scores, event_ids, user_lat, user_lon, preferences):
+    """Apply distance-based penalty to event scores"""
+    if user_lat is None or user_lon is None:
+        return scores
         
-        filtered_ids = []
-        for event_id, event_lat, event_lon in events_coords:
+    # Get max distance from preferences
+    preferred_range = preferences.get("preferredDistance", "0-5")
+    max_distance_km = {
+        "0-5": 5,
+        "5-15": 15,
+        "15-30": 30,
+        "30+": 100
+    }.get(preferred_range, 5)
+    
+    # Get coordinates for all events
+    event_coords = get_event_coordinates(event_ids)
+    
+    # Apply distance penalty to scores
+    for event_id in event_ids:
+        if event_id in event_coords:
+            event_lat, event_lon = event_coords[event_id]
             if event_lat is not None and event_lon is not None:
                 try:
                     distance = haversine(user_lat, user_lon, float(event_lat), float(event_lon))
-                    if distance <= max_distance:
-                        filtered_ids.append(event_id)
+                    distance_penalty = min(distance / max_distance_km, 2.0)  # normalize
+                    scores[event_id] -= distance_penalty * DISTANCE_WEIGHT
                 except (ValueError, TypeError) as e:
                     logger.warning(f"Error calculating distance for event {event_id}: {e}")
-                    continue
-        
-        return filtered_ids
-    except Exception as e:
-        logger.error(f"Error filtering events by distance: {e}")
-        return event_ids
+    
+    return scores
 
 # Fetch interaction data from database
 def get_interactions():
@@ -162,10 +178,8 @@ def recommend_events(user_id, top_n=10):
     user_id = int(user_id)  # Ensure user_id is always an int for indexing
     logger.info(f"Starting recommendation process for user {user_id}")
     try:
-        # Get user preferences
+        # Get user preferences and location
         preferences = get_user_preferences(user_id)
-        
-        # Get user's location
         user_lat, user_lon = get_user_location(user_id)
         
         # Get user's interaction data
@@ -230,31 +244,15 @@ def recommend_events(user_id, top_n=10):
             # Remove already seen events
             seen_events = set(df[df['user_id'] == user_id]['event_id'])
             recommendations = combined_scores.drop(labels=seen_events, errors='ignore').sort_values(ascending=False)
-            recommended_ids = recommendations.head(top_n).index.tolist()
+            recommended_ids = recommendations.head(top_n * 2).index.tolist()  # Get more candidates for distance filtering
 
-        # Apply distance filtering if user location is available
+        # Apply distance penalty to scores
         if user_lat is not None and user_lon is not None:
-            # Get max distance from preferences or use default
-            max_distance = 30  # Default max distance in km
-            if preferences.get("preferredDistance"):
-                try:
-                    max_distance = int(preferences["preferredDistance"].split("-")[1])
-                except (ValueError, IndexError):
-                    pass
-
-            # Filter events by distance
-            filtered_ids = filter_events_by_distance(recommended_ids, user_lat, user_lon, max_distance)
+            scores_dict = {id: score for id, score in zip(recommendations.index, recommendations.values)}
+            scores_dict = apply_distance_penalty(scores_dict, recommended_ids, user_lat, user_lon, preferences)
             
-            # If we don't have enough recommendations after filtering, add more
-            if len(filtered_ids) < top_n:
-                logger.info(f"Not enough recommendations after distance filtering. Adding more events.")
-                # Get more recommendations beyond the initial top_n
-                additional_ids = recommendations.index[len(filtered_ids):top_n].tolist()
-                additional_filtered = filter_events_by_distance(additional_ids, user_lat, user_lon, max_distance)
-                filtered_ids.extend(additional_filtered)
-                filtered_ids = filtered_ids[:top_n]  # Keep only top_n recommendations
-            
-            recommended_ids = filtered_ids
+            # Sort by final scores and get top N
+            recommended_ids = sorted(scores_dict.keys(), key=lambda x: scores_dict[x], reverse=True)[:top_n]
 
         logger.info(f"Generated {len(recommended_ids)} recommendations for user {user_id}")
         return recommended_ids
