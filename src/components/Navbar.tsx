@@ -215,6 +215,8 @@ export default function Navbar() {
       });
       if (res.ok) {
         setFavorites(prev => prev.filter(fav => fav.id !== eventId));
+        // Emit event to notify other components
+        eventEmitter.emit('favoritesChange', { type: 'remove', eventId });
       }
     } finally {
       setLoadingFavorites(false);
