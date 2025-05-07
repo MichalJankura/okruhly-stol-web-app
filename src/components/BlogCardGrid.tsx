@@ -99,6 +99,23 @@ const BlogCardGrid = () => {
     }
   }, []);
 
+  // Listen for favorites changes
+  useEffect(() => {
+    const handleFavoritesChange = (data: { type: string, eventId: number }) => {
+      if (data.type === 'remove') {
+        setFavorites(prev => prev.filter(id => id !== data.eventId));
+      } else if (data.type === 'add') {
+        setFavorites(prev => [...prev, data.eventId]);
+      }
+    };
+
+    if (eventEmitter && eventEmitter.subscribe) {
+      const unsubscribe = eventEmitter.subscribe('favoritesChange', handleFavoritesChange);
+      return () => unsubscribe();
+    }
+    return () => {}; // Return empty cleanup function if eventEmitter is not available
+  }, []);
+
   // Fetch favorites when user changes
   useEffect(() => {
     if (!user) {
