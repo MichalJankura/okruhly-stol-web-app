@@ -1,16 +1,15 @@
 from flask import Flask, request, jsonify
 import pandas as pd
-import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import psycopg2
 import logging
 import time
 import os
 from dotenv import load_dotenv
-import traceback
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import MultiLabelBinarizer
 from collections import defaultdict
+from math import radians, cos, sin, asin, sqrt
 
 # Tunable weights for hybrid recommendation
 CONTENT_WEIGHT = 0.3
@@ -39,6 +38,77 @@ def get_db_connection():
         port=5432,
         sslmode='require'
     )
+
+def haversine(lat1, lon1, lat2, lon2):
+    """Calculate the great circle distance between two points on the earth"""
+    R = 6371  # Earth radius in km
+    
+    # Convert decimal degrees to radians
+    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+    
+    # Haversine formula
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    c = 2 * asin(sqrt(a))
+    
+    return R * c
+
+def get_user_location(user_id):
+    """Fetch user's location from the database"""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT latitude, longitude FROM users WHERE user_id = %s",
+            (user_id,)
+        )
+        result = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if result and result[0] is not None and result[1] is not None:
+            return float(result[0]), float(result[1])
+        logger.warning(f"No location found for user {user_id}")
+        return None, None
+    except Exception as e:
+        logger.error(f"Error fetching user location: {e}")
+        return None, None
+
+def filter_events_by_distance(event_ids, user_lat, user_lon, max_distance):
+    """Filter events by distance from user's location"""
+    if not event_ids or user_lat is None or user_lon is None:
+        return event_ids
+        
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Get coordinates for all events in one query
+        placeholders = ','.join(['%s'] * len(event_ids))
+        cursor.execute(
+            f"SELECT id, latitude, longitude FROM events WHERE id IN ({placeholders})",
+            event_ids
+        )
+        events_coords = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        filtered_ids = []
+        for event_id, event_lat, event_lon in events_coords:
+            if event_lat is not None and event_lon is not None:
+                try:
+                    distance = haversine(user_lat, user_lon, float(event_lat), float(event_lon))
+                    if distance <= max_distance:
+                        filtered_ids.append(event_id)
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Error calculating distance for event {event_id}: {e}")
+                    continue
+        
+        return filtered_ids
+    except Exception as e:
+        logger.error(f"Error filtering events by distance: {e}")
+        return event_ids
 
 # Fetch interaction data from database
 def get_interactions():
@@ -95,6 +165,9 @@ def recommend_events(user_id, top_n=10):
         # Get user preferences
         preferences = get_user_preferences(user_id)
         
+        # Get user's location
+        user_lat, user_lon = get_user_location(user_id)
+        
         # Get user's interaction data
         df = get_interactions()
         interaction_matrix = build_user_event_matrix(df)
@@ -115,64 +188,76 @@ def recommend_events(user_id, top_n=10):
                 content_scores[event["id"]] = score
 
             ranked = pd.Series(content_scores).sort_values(ascending=False)
-            return ranked.head(top_n).index.tolist()
+            recommended_ids = ranked.head(top_n).index.tolist()
+        else:
+            # 1. Collaborative scores
+            logger.info(f"Calculating cosine similarity for user-event matrix of shape {interaction_matrix.shape}")
+            similarity = cosine_similarity(interaction_matrix)
+            logger.info(f"Cosine similarity matrix calculated with shape {similarity.shape}")
+            target_idx = interaction_matrix.index.get_loc(user_id)
+            user_vecs = interaction_matrix.values
+            collab_scores = similarity[target_idx] @ user_vecs
+            collab_scores = pd.Series(collab_scores, index=interaction_matrix.columns)
 
-        # 1. Collaborative scores
-        logger.info(f"Calculating cosine similarity for user-event matrix of shape {interaction_matrix.shape}")
-        similarity = cosine_similarity(interaction_matrix)
-        logger.info(f"Cosine similarity matrix calculated with shape {similarity.shape}")
-        target_idx = interaction_matrix.index.get_loc(user_id)  # ✅ Will now work correctly
-        user_vecs = interaction_matrix.values
-        collab_scores = similarity[target_idx] @ user_vecs
-        collab_scores = pd.Series(collab_scores, index=interaction_matrix.columns)
+            # 2. Content-based scores from profile
+            events = get_all_events()
+            content_scores = defaultdict(float)
+            for event in events:
+                score = 0
+                if preferences.get("eventCategories") and event.get("event_type") in preferences["eventCategories"]:
+                    score += 1
+                if preferences.get("preferredTime") and preferences["preferredTime"] in str(event.get("start_time")):
+                    score += 0.5
+                content_scores[event["id"]] = score
+            content_scores = pd.Series(content_scores)
 
-        # 2. Content-based scores from profile
-        events = get_all_events()
-        content_scores = defaultdict(float)
-        for event in events:
-            score = 0
-            if preferences.get("eventCategories") and event.get("event_type") in preferences["eventCategories"]:
-                score += 1
-            if preferences.get("preferredTime") and preferences["preferredTime"] in str(event.get("start_time")):
-                score += 0.5
+            # 3. Combine scores
+            def normalize(scores):
+                return (scores - scores.min()) / (scores.max() - scores.min() + 1e-6)
+
+            collab_scores = normalize(collab_scores)
+            content_scores = normalize(content_scores)
+
+            # Add fallback popular score if needed
+            popular_scores = pd.Series(0, index=collab_scores.index)
+
+            combined_scores = (
+                COLLAB_WEIGHT * collab_scores.add(0, fill_value=0) +
+                CONTENT_WEIGHT * content_scores.add(0, fill_value=0) +
+                POPULAR_WEIGHT * popular_scores.add(0, fill_value=0)
+            )
+
+            # Remove already seen events
+            seen_events = set(df[df['user_id'] == user_id]['event_id'])
+            recommendations = combined_scores.drop(labels=seen_events, errors='ignore').sort_values(ascending=False)
+            recommended_ids = recommendations.head(top_n).index.tolist()
+
+        # Apply distance filtering if user location is available
+        if user_lat is not None and user_lon is not None:
+            # Get max distance from preferences or use default
+            max_distance = 30  # Default max distance in km
             if preferences.get("preferredDistance"):
-                score += 0.3  # fake location weighting if not implemented
-            # You can add budget, size, etc. here
-            content_scores[event["id"]] = score
-        content_scores = pd.Series(content_scores)
+                try:
+                    max_distance = int(preferences["preferredDistance"].split("-")[1])
+                except (ValueError, IndexError):
+                    pass
 
-        # 3. Combine scores — this is your hybrid logic
-        def normalize(scores):
-            return (scores - scores.min()) / (scores.max() - scores.min() + 1e-6)
+            # Filter events by distance
+            filtered_ids = filter_events_by_distance(recommended_ids, user_lat, user_lon, max_distance)
+            
+            # If we don't have enough recommendations after filtering, add more
+            if len(filtered_ids) < top_n:
+                logger.info(f"Not enough recommendations after distance filtering. Adding more events.")
+                # Get more recommendations beyond the initial top_n
+                additional_ids = recommendations.index[len(filtered_ids):top_n].tolist()
+                additional_filtered = filter_events_by_distance(additional_ids, user_lat, user_lon, max_distance)
+                filtered_ids.extend(additional_filtered)
+                filtered_ids = filtered_ids[:top_n]  # Keep only top_n recommendations
+            
+            recommended_ids = filtered_ids
 
-        collab_scores = normalize(collab_scores)
-        content_scores = normalize(content_scores)
-
-        # Add fallback popular score if needed (currently empty, but can be filled if added)
-        popular_scores = pd.Series(0, index=collab_scores.index)
-
-        combined_scores = (
-            COLLAB_WEIGHT * collab_scores.add(0, fill_value=0) +
-            CONTENT_WEIGHT * content_scores.add(0, fill_value=0) +
-            POPULAR_WEIGHT * popular_scores.add(0, fill_value=0)
-        )
-
-        # Remove already seen events
-        seen_events = set(df[df['user_id'] == user_id]['event_id'])
-        recommendations = combined_scores.drop(labels=seen_events, errors='ignore').sort_values(ascending=False).head(top_n)
-
-        # If we don't have enough recommendations, add popular events
-        if len(recommendations) < top_n:
-            logger.info(f"Not enough personalized recommendations. Adding popular events.")
-            popular_events = df[df['rating'] == 1]['event_id'].value_counts().head(top_n).index.tolist()
-            for event_id in popular_events:
-                if event_id not in recommendations.index and event_id not in seen_events:
-                    recommendations[event_id] = 0.5  # Add with a lower score
-                    if len(recommendations) >= top_n:
-                        break
-
-        logger.info(f"Generated {len(recommendations)} recommendations for user {user_id}")
-        return recommendations.index.tolist()
+        logger.info(f"Generated {len(recommended_ids)} recommendations for user {user_id}")
+        return recommended_ids
     except Exception as e:
         logger.error(f"Error in recommend_events for user {user_id}: {e}")
         # Fallback to popular events if there's an error
