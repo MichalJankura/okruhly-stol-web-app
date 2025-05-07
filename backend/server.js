@@ -757,6 +757,45 @@ app.delete('/api/favorites', async (req, res) => {
     }
 });
 
+// Update user location
+app.post('/api/update-location', async (req, res) => {
+  const { user_id, latitude, longitude } = req.body;
+  
+  if (!user_id || latitude === undefined || longitude === undefined) {
+    return res.status(400).json({ error: 'user_id, latitude, and longitude are required' });
+  }
+
+  try {
+    const result = await pool.query(
+      `UPDATE users 
+       SET latitude = $1, longitude = $2 
+       WHERE user_id = $3
+       RETURNING user_id, latitude, longitude`,
+      [latitude, longitude, user_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({ 
+      message: 'Location updated successfully',
+      user: {
+        id: result.rows[0].user_id,
+        latitude: result.rows[0].latitude,
+        longitude: result.rows[0].longitude
+      }
+    });
+  } catch (err) {
+    console.error('Error updating user location:', err);
+    res.status(500).json({ 
+      error: 'Failed to update user location',
+      error_type: err.name,
+      error_message: err.message
+    });
+  }
+});
+
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });
