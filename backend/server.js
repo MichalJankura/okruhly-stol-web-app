@@ -687,9 +687,6 @@ app.get('/api/favorites', async (req, res) => {
             return res.status(400).json({ error: 'Missing user_id parameter' });
         }
 
-        // Removed migration from user_event_interactions to user_favorites
-        // Only the heart button (POST/DELETE) will control favorites
-
         const query = `
             SELECT e.* FROM events e
             JOIN user_favorites uf ON e.id = uf.event_id
