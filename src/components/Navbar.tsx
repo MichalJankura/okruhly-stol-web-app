@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 import { eventEmitter } from '../utils/events'
 import { useRouter } from 'next/router'
 import Login from './Registration/Login'
+import Register from './Registration/Register'
 import { FaHeart, FaClock, FaMapMarkerAlt, FaTimes as FaClose } from "react-icons/fa";
 import { format } from "date-fns";
 import { sk } from "date-fns/locale";
@@ -66,6 +67,7 @@ interface BlogArticle {
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
   const [showLogin, setShowLogin] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<BlogArticle | null>(null);
   const [showModal, setShowModal] = useState(false);
   const router = useRouter();
@@ -137,11 +139,17 @@ export default function Navbar() {
 
   const handleRegisterClick = () => {
     setShowLogin(false);
-    // You can add register modal functionality here if needed
+    setShowRegister(true);
+  };
+
+  const handleLoginClick = () => {
+    setShowRegister(false);
+    setShowLogin(true);
   };
 
   const handleClose = () => {
     setShowLogin(false);
+    setShowRegister(false);
   };
 
   const fetchFavorites = async () => {
@@ -497,6 +505,22 @@ export default function Navbar() {
               </svg>
             </button>
             <Login onRegisterClick={handleRegisterClick} onClose={handleClose} />
+          </div>
+        </div>
+      )}
+
+      {showRegister && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="relative">
+            <button
+              onClick={handleClose}
+              className="absolute -top-4 -right-4 bg-white rounded-full p-2 text-gray-600 hover:text-gray-800 shadow-lg z-50"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <Register onLoginClick={handleLoginClick} />
           </div>
         </div>
       )}
