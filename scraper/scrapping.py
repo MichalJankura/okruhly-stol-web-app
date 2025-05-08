@@ -391,9 +391,138 @@ def severovychod_scrap():
                         if "data:image/svg+xml" in image_url:
                             if img_tag.get('data-lazy-src'):
                                 image_url = img_tag['data-lazy-src']
+                
+                # Extract time from description
+                time_matches = re.findall(r'\b([0-1]?[0-9]|2[0-3]):[0-5][0-9]\b', description)
+                if time_matches:
+                    time_str = time_matches[-1]  # Get the last time found
+                    # Ensure the time is in HH:MM format
+                    if ':' not in time_str:
+                        time_str = f"{time_str}:00"
+                    start_time = time_str
+                    end_time = None
+                else:
+                    start_time = None
+                    end_time = None
+                
                 events_data.append((title, event_type, event_location, start_date, end_date, start_time, end_time, tickets, description, link_to, image_url, latitude, longitude))
     else:
         print(f'Chyba pri načítaní stránky. Status kód: {response.status_code}')
+    return events_data
+
+def ajdnes_scrap():
+    url = 'https://www.ajdnes.sk/presovsky-kraj/r3'
+    url_event = 'https://www.ajdnes.sk/'
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9,sk;q=0.8',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1'
+    }
+    events_data = []
+    page = 1
+    
+    while True:
+        current_url = url if page == 1 else f"{url}/page:{page}"
+        response = requests.get(current_url, headers=headers)
+        
+        if response.status_code != 200:
+            print(f'Chyba pri načítaní stránky {page}. Status kód: {response.status_code}')
+            break
+            
+        soup = BeautifulSoup(response.content, 'html.parser')
+        events = soup.find_all('div', class_='col-sm-9 inf')
+        
+        if not events:  # If no events found on this page, we've reached the end
+            break
+            
+        for event in events:
+            try:
+                a_tag = event.find('a')
+                if a_tag and a_tag.get('href'):
+                    href = a_tag.get('href')
+                    response = requests.get(f'{url_event}{href}', headers=headers)
+                    link_to = f'{url_event}{href}'
+                    # print(link_to)
+                    if response.status_code == 200:
+                        soup = BeautifulSoup(response.content, 'html.parser')
+                        title = soup.find('h1').text.strip() if soup else 'Názov neznámy'
+                        event_type = soup.find('div', class_='cat geC').text.strip() if soup else 'Typ neznámy'
+                        location_div = soup.find('div', class_='loc mid')
+                        if location_div:
+                            venue = location_div.find('a').text.strip() if location_div.find('a') else ''
+                            city = location_div.find_all('a')[1].text.strip() if len(location_div.find_all('a')) > 1 else ''
+                            event_location = f"{venue}, {city}" if venue and city else venue or city or 'Miesto neznáme'
+                            latitude, longitude = geocode_location(event_location)
+                        else:
+                            event_location = 'Miesto neznáme'
+                            latitude, longitude = None, None
+                        
+                        date_div = soup.find('div', class_='dat')
+                        if date_div:
+                            date_links = date_div.find_all('a')
+                            if len(date_links) == 2:
+                                start_date = date_links[0].text.strip()
+                                end_date = date_links[1].text.strip()
+                                start_date = datetime.strptime(start_date, '%d.%m.%Y').strftime('%d.%m.%Y')
+                                end_date = datetime.strptime(end_date, '%d.%m.%Y').strftime('%d.%m.%Y')
+                            else:
+                                start_date = date_links[0].text.strip()
+                                start_date = datetime.strptime(start_date, '%d.%m.%Y').strftime('%d.%m.%Y')
+                                end_date = None
+                        else:
+                            start_date = None
+                            end_date = None
+                        
+                        tickets = None
+                        image_div = soup.find('div', class_='webp lazy')
+                        if image_div:
+                            img_link = image_div.find('a')
+                            if img_link and img_link.get('href'):
+                                image_url = f"{url_event}{img_link['href']}"
+                            else:
+                                image_url = None
+                        else:
+                            image_url = None
+                        
+                        desc_div = soup.find('div', class_='desc')
+                        if desc_div:
+                            description = desc_div.get_text(separator=' ', strip=True)
+                            description = ' '.join(description.split())
+                        else:
+                            description = 'Popis neznámy'
+                        
+                        # Extract time from description
+                        time_matches = re.findall(r'\b([0-1]?[0-9]|2[0-3]):[0-5][0-9]\b', description)
+                        if time_matches:
+                            time_str = time_matches[-1]  # Get the last time found
+                            # Ensure the time is in HH:MM format
+                            if ':' not in time_str:
+                                time_str = f"{time_str}:00"
+                            start_time = time_str
+                            end_time = None
+                        else:
+                            start_time = None
+                            end_time = None
+                        
+                        events_data.append((title, event_type, event_location, start_date, end_date, start_time, end_time, tickets, description, link_to, image_url, latitude, longitude))
+                
+            except Exception as e:
+                continue
+        
+        # Check if there's a next page
+        next_page = soup.find('a', string=str(page + 1))
+        if not next_page:
+            break
+            
+        page += 1
+    
     return events_data
 
 def scrape_for_events():
@@ -402,7 +531,9 @@ def scrape_for_events():
     push_event_to_db(events1)
     events2 = gopresov_scrap()
     push_event_to_db(events2)
-    events4 = severovychod_scrap()
+    events3 = severovychod_scrap()
+    push_event_to_db(events3)
+    events4 = ajdnes_scrap()
     push_event_to_db(events4)
 
 if __name__ == "__main__":
