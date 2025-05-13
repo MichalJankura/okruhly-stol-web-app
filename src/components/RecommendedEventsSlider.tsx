@@ -86,7 +86,7 @@ const RecommendedEventsSlider = () => {
     };
 
     fetchRecommendedEvents();
-  }, []);
+  }, [user?.user_id, user?.id]); 
 
   // Listen for user changes (login/logout)
   useEffect(() => {
