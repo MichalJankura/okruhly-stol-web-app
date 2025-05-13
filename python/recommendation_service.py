@@ -185,73 +185,64 @@ def recommend_events(user_id, top_n=10):
         # Get user's interaction data
         df = get_interactions()
         interaction_matrix = build_user_event_matrix(df)
+        events = get_all_events()
+        event_df = pd.DataFrame(events)
 
         # Check for cold start scenario
-        if user_id not in interaction_matrix.index or interaction_matrix.loc[user_id].sum() == 0:
-            logger.info(f"Cold start for user {user_id}. Ranking by preferences + top events.")
+        target_idx = interaction_matrix.index.get_loc(user_id) if user_id in interaction_matrix.index else None
 
-            # Score based on preferences
-            events = get_all_events()
-            content_scores = defaultdict(float)
-            for event in events:
+        if target_idx is None:
+            recommendations = event_df.to_dict(orient="records")
+            # Uniform score for all events - fallback when no interactions exist
+            scores_dict = {event["id"]: 1.0 for event in recommendations}
+        else:
+            similarity = cosine_similarity(interaction_matrix)
+            collab_scores = similarity[target_idx] @ interaction_matrix.values
+            collab_scores = pd.Series(collab_scores, index=interaction_matrix.columns)
+
+            # Custom score based on preferences
+            content_scores = []
+            for _, event in event_df.iterrows():
                 score = 0
                 if preferences.get("eventCategories") and event["event_type"] in preferences["eventCategories"]:
                     score += 1
                 if preferences.get("preferredTime") and preferences["preferredTime"] in str(event["start_time"]):
                     score += 0.5
-                content_scores[event["id"]] = score
+                content_scores.append(score)
+            content_scores = pd.Series(content_scores, index=event_df["id"])
 
-            ranked = pd.Series(content_scores).sort_values(ascending=False)
-            recommended_ids = ranked.head(top_n).index.tolist()
-        else:
-            # 1. Collaborative scores
-            logger.info(f"Calculating cosine similarity for user-event matrix of shape {interaction_matrix.shape}")
-            similarity = cosine_similarity(interaction_matrix)
-            logger.info(f"Cosine similarity matrix calculated with shape {similarity.shape}")
-            target_idx = interaction_matrix.index.get_loc(user_id)
-            user_vecs = interaction_matrix.values
-            collab_scores = similarity[target_idx] @ user_vecs
-            collab_scores = pd.Series(collab_scores, index=interaction_matrix.columns)
-
-            # 2. Content-based scores from profile
-            events = get_all_events()
-            content_scores = defaultdict(float)
-            for event in events:
-                score = 0
-                if preferences.get("eventCategories") and event.get("event_type") in preferences["eventCategories"]:
-                    score += 1
-                if preferences.get("preferredTime") and preferences["preferredTime"] in str(event.get("start_time")):
-                    score += 0.5
-                content_scores[event["id"]] = score
-            content_scores = pd.Series(content_scores)
-
-            # 3. Combine scores
-            def normalize(scores):
-                return (scores - scores.min()) / (scores.max() - scores.min() + 1e-6)
-
-            collab_scores = normalize(collab_scores)
-            content_scores = normalize(content_scores)
-
-            # Add fallback popular score if needed
+            # Popularity score - interaction count
+            event_interaction_counts = df["event_id"].value_counts()
             popular_scores = pd.Series(0, index=collab_scores.index)
+            for event_id, count in event_interaction_counts.items():
+                if event_id in popular_scores:
+                    popular_scores[event_id] = count
+
+            # Score normalization
+            def normalize(series):
+                return (series - series.min()) / (series.max() - series.min()) if series.max() != series.min() else series
+
+            collab_scores_norm = normalize(collab_scores)
+            content_scores_norm = normalize(content_scores)
+            popular_scores_norm = normalize(popular_scores)
 
             combined_scores = (
-                COLLAB_WEIGHT * collab_scores.add(0, fill_value=0) +
-                CONTENT_WEIGHT * content_scores.add(0, fill_value=0) +
-                POPULAR_WEIGHT * popular_scores.add(0, fill_value=0)
+                COLLAB_WEIGHT * collab_scores_norm +
+                CONTENT_WEIGHT * content_scores_norm +
+                POPULAR_WEIGHT * popular_scores_norm
             )
 
-            # Remove already seen events
-            seen_events = set(df[df['user_id'] == user_id]['event_id'])
-            recommendations = combined_scores.drop(labels=seen_events, errors='ignore').sort_values(ascending=False)
-            recommended_ids = recommendations.head(top_n * 2).index.tolist()  # Get more candidates for distance filtering
+            scores_dict = combined_scores.to_dict()
+            recommendations = event_df.to_dict(orient="records")
 
         # Apply distance penalty to scores
         if user_lat is not None and user_lon is not None:
-            scores_dict = {id: score for id, score in zip(recommendations.index, recommendations.values)}
-            scores_dict = apply_distance_penalty(scores_dict, recommended_ids, user_lat, user_lon, preferences)
+            scores_dict = apply_distance_penalty(scores_dict, list(scores_dict.keys()), user_lat, user_lon, preferences)
             
             # Sort by final scores and get top N
+            recommended_ids = sorted(scores_dict.keys(), key=lambda x: scores_dict[x], reverse=True)[:top_n]
+        else:
+            # If no location data, just sort by scores
             recommended_ids = sorted(scores_dict.keys(), key=lambda x: scores_dict[x], reverse=True)[:top_n]
 
         logger.info(f"Generated {len(recommended_ids)} recommendations for user {user_id}")
