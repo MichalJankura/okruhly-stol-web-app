@@ -14,8 +14,8 @@ from collections import defaultdict
 from math import radians, cos, sin, asin, sqrt
 
 # Tunable weights for hybrid recommendation
-CONTENT_WEIGHT = 0.5
-COLLAB_WEIGHT = 0.4
+CONTENT_WEIGHT = 0.3
+COLLAB_WEIGHT = 0.6
 POPULAR_WEIGHT = 0.1
 DISTANCE_WEIGHT = 0.3  # Weight for distance penalty
 
