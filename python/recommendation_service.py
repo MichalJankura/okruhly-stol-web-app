@@ -260,14 +260,13 @@ def recommend_events(user_id, top_n=10):
             scores_dict = apply_distance_penalty(scores_dict, list(scores_dict.keys()), user_lat, user_lon, preferences)
             
             # Get current time and threshold for recent interactions
-            now = datetime.now(UTC)
+            now = datetime.now().replace(tzinfo=None)  # make naive datetime
             recent_threshold = now - timedelta(minutes=2)
 
-            # Exclude events that are:
-            # - marked as "not_interested" (rating -1), or
-            # - marked as "interested" very recently (within last 2 minutes)
-            df['interaction_time'] = pd.to_datetime(df.get('interaction_time'), errors='coerce')  # safe datetime parsing
+            # Ensure interaction_time is datetime
+            df['interaction_time'] = pd.to_datetime(df['interaction_time'], errors='coerce')
 
+            # Filter events
             filtered_ids = df[
                 (df['user_id'] == user_id) &
                 (
@@ -276,6 +275,7 @@ def recommend_events(user_id, top_n=10):
                 )
             ]['event_id'].tolist()
 
+            # Exclude filtered
             scores_dict = {k: v for k, v in scores_dict.items() if k not in filtered_ids}
             
             # Sort by final scores and get top N
