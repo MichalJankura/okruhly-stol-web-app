@@ -134,7 +134,11 @@ def get_interactions():
         query = """
             SELECT DISTINCT ON (user_id, event_id)
                    user_id, event_id,
-                   CASE WHEN action_type = 'interested' THEN 1 ELSE 0 END AS rating
+                   CASE 
+                       WHEN action_type = 'interested' THEN 1 
+                       WHEN action_type = 'not_interested' THEN -1
+                       ELSE 0 
+                   END AS rating
             FROM user_event_interactions
             ORDER BY user_id, event_id, interaction_time DESC;
         """
@@ -239,10 +243,18 @@ def recommend_events(user_id, top_n=10):
         if user_lat is not None and user_lon is not None:
             scores_dict = apply_distance_penalty(scores_dict, list(scores_dict.keys()), user_lat, user_lon, preferences)
             
+            # Exclude events the user marked as 'not_interested'
+            not_interested_ids = df[(df['user_id'] == user_id) & (df['rating'] == -1)]['event_id'].tolist()
+            scores_dict = {k: v for k, v in scores_dict.items() if k not in not_interested_ids}
+            
             # Sort by final scores and get top N
             recommended_ids = sorted(scores_dict.keys(), key=lambda x: scores_dict[x], reverse=True)[:top_n]
         else:
             # If no location data, just sort by scores
+            # Exclude events the user marked as 'not_interested'
+            not_interested_ids = df[(df['user_id'] == user_id) & (df['rating'] == -1)]['event_id'].tolist()
+            scores_dict = {k: v for k, v in scores_dict.items() if k not in not_interested_ids}
+            
             recommended_ids = sorted(scores_dict.keys(), key=lambda x: scores_dict[x], reverse=True)[:top_n]
 
         logger.info(f"Generated {len(recommended_ids)} recommendations for user {user_id}")
