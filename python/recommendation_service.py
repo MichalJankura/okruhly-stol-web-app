@@ -136,6 +136,7 @@ def get_interactions():
         query = """
             SELECT DISTINCT ON (user_id, event_id)
                    user_id, event_id,
+                   interaction_time,
                    CASE 
                        WHEN action_type = 'interested' THEN 1 
                        WHEN action_type = 'not_interested' THEN -1
