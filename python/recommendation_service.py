@@ -5,6 +5,7 @@ import psycopg2
 import logging
 import time
 import os
+import random
 from dotenv import load_dotenv
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import MultiLabelBinarizer
@@ -196,9 +197,22 @@ def recommend_events(user_id, top_n=10):
         target_idx = interaction_matrix.index.get_loc(user_id) if user_id in interaction_matrix.index else None
 
         if target_idx is None:
-            recommendations = event_df.to_dict(orient="records")
-            # Uniform score for all events - fallback when no interactions exist
-            scores_dict = {event["id"]: 1.0 for event in recommendations}
+            # Content-based fallback using preferences
+            content_scores = []
+            for _, event in event_df.iterrows():
+                score = 0
+                if preferences.get("eventCategories") and event["event_type"] in preferences["eventCategories"]:
+                    score += 1
+                if preferences.get("preferredTime") and preferences["preferredTime"] in str(event["start_time"]):
+                    score += 0.5
+                content_scores.append(score)
+            content_scores = pd.Series(content_scores, index=event_df["id"])
+
+            def normalize(series):
+                return (series - series.min()) / (series.max() - series.min()) if series.max() != series.min() else series
+
+            content_scores_norm = normalize(content_scores)
+            scores_dict = content_scores_norm.to_dict()
         else:
             similarity = cosine_similarity(interaction_matrix)
             collab_scores = similarity[target_idx] @ interaction_matrix.values
