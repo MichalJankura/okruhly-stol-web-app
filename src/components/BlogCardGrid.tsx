@@ -165,31 +165,20 @@ const BlogCardGrid = () => {
   }, [favorites, user]);
 
   const handleRecommendation = useCallback((eventId: number, isInterested: boolean) => {
-    setFeedbackStates(prev => {
-      console.log("Setting feedback for", eventId, isInterested ? "green" : "red");
-      return { ...prev, [eventId]: isInterested ? "green" : "red" };
-    });
+    setFeedbackStates(prev => ({ ...prev, [eventId]: isInterested ? "green" : "red" }));
     setFadeOutEvents(prev => [...prev, eventId]);
-    
+
     const userData = JSON.parse(localStorage.getItem("user") || "{}");
     const userId = userData.user_id || userData.id;
-    
+
     if (!userId) {
       console.error('No user ID found when trying to handle recommendation');
       return;
     }
 
-    console.log('Handling recommendation:', { userId, eventId, isInterested });
-
-    // Find the event type (category) for this event
-    const event = Array.isArray(recommendedArticles) 
-      ? recommendedArticles.find(e => e.id === eventId) 
-      : null;
+    const event = recommendedArticles.find(e => e.id === eventId);
     const eventType = event?.category || "Unknown";
 
-    console.log('Event type found:', eventType);
-
-    // Log interaction
     fetch("https://okruhly-stol-web-app-s9d9.onrender.com/api/interactions", {
       method: "POST",
       body: JSON.stringify({
@@ -201,10 +190,8 @@ const BlogCardGrid = () => {
         "Content-Type": "application/json"
       }
     })
-    .then((res: Response) => res.json())
-    .then((data: any) => {
-      console.log('Interaction logged:', data);
-      // Update preference weight
+    .then(res => res.json())
+    .then(() => {
       return fetch("https://okruhly-stol-web-app-s9d9.onrender.com/api/update-weight", {
         method: "POST",
         body: JSON.stringify({
@@ -217,59 +204,64 @@ const BlogCardGrid = () => {
         }
       });
     })
-    .then((res: Response) => res.json())
-    .then((data: any) => {
-      console.log('Weight updated:', data);
-      // Remove the event after animation completes
+    .then(res => res.json())
+    .then(() => {
       setTimeout(() => {
-        setRecommendedArticles(prev => Array.isArray(prev) ? prev.filter(article => article.id !== eventId) : []);
+        // Remove the marked event
+        setRecommendedArticles(prev => prev.filter(article => article.id !== eventId));
         setFadeOutEvents(prev => prev.filter(id => id !== eventId));
-        
-        // Fetch a new recommendation
+
+        // Load new recommendation
         fetch(`https://okruhly-stol-web-app-s9d9.onrender.com/api/recommendations?user_id=${userId}`)
           .then(res => res.json())
           .then(data => {
-            if (Array.isArray(data) && data.length > 0) {
-              // Get the first recommendation that's not already shown
-              const currentIds = new Set(Array.isArray(recommendedArticles) ? recommendedArticles.map(article => article.id) : []);
-              const newRecommendation = data.find((rec: any) => !currentIds.has(rec.id));
-              if (newRecommendation) {
-                setRecommendedArticles(prev => Array.isArray(prev) ? [...prev, newRecommendation] : [newRecommendation]);
-              } else {
-                // If no new recommendations, get a random event
-                const availableEvents = Array.isArray(allArticles) ? allArticles.filter(article => !currentIds.has(article.id)) : [];
-                const randomEvent = getRandomEvents(availableEvents, 1)[0];
-                if (randomEvent) {
-                  setRecommendedArticles(prev => Array.isArray(prev) ? [...prev, randomEvent] : [randomEvent]);
-                }
+            const currentIds = new Set(recommendedArticles.map(article => article.id));
+            const newRecommendations = data.filter((rec: any) => !currentIds.has(rec.id) && rec.id !== eventId);
+
+            const TARGET_COUNT = 8; // koľko odporúčaní má byť zobrazených
+
+            setRecommendedArticles(prev => {
+              const current = prev.filter(article => article.id !== eventId); // odstránené ohodnotené
+              const added = [];
+
+              for (const rec of newRecommendations) {
+                if (current.length + added.length >= TARGET_COUNT) break;
+                added.push(rec);
               }
-            }
+
+              // fallback z allArticles ak chýba
+              const currentIds = new Set([...current, ...added].map(a => a.id));
+              const missingCount = TARGET_COUNT - (current.length + added.length);
+              const fallback = getRandomEvents(
+                allArticles.filter(a => !currentIds.has(a.id) && a.id !== eventId),
+                missingCount
+              );
+
+              return [...current, ...added, ...fallback];
+            });
           })
           .catch(error => {
             console.error('Error fetching new recommendation:', error);
-            // On error, get a random event
-            const currentIds = new Set(Array.isArray(recommendedArticles) ? recommendedArticles.map(article => article.id) : []);
-            const availableEvents = Array.isArray(allArticles) ? allArticles.filter(article => !currentIds.has(article.id)) : [];
-            const randomEvent = getRandomEvents(availableEvents, 1)[0];
+            const currentIds = new Set(recommendedArticles.map(article => article.id));
+            const available = allArticles.filter(article => !currentIds.has(article.id) && article.id !== eventId);
+            const randomEvent = getRandomEvents(available, 1)[0];
             if (randomEvent) {
-              setRecommendedArticles(prev => Array.isArray(prev) ? [...prev, randomEvent] : [randomEvent]);
+              setRecommendedArticles(prev => [...prev, randomEvent]);
             }
           });
       }, 500);
     })
     .catch((error: Error) => {
       console.error('Error in recommendation flow:', error);
-      // Even if there's an error, still remove the event and try to get a new one
       setTimeout(() => {
-        setRecommendedArticles(prev => Array.isArray(prev) ? prev.filter(article => article.id !== eventId) : []);
+        setRecommendedArticles(prev => prev.filter(article => article.id !== eventId));
         setFadeOutEvents(prev => prev.filter(id => id !== eventId));
-        
-        // Get a random event as fallback
-        const currentIds = new Set(Array.isArray(recommendedArticles) ? recommendedArticles.map(article => article.id) : []);
-        const availableEvents = Array.isArray(allArticles) ? allArticles.filter(article => !currentIds.has(article.id)) : [];
-        const randomEvent = getRandomEvents(availableEvents, 1)[0];
+
+        const currentIds = new Set(recommendedArticles.map(article => article.id));
+        const available = allArticles.filter(article => !currentIds.has(article.id) && article.id !== eventId);
+        const randomEvent = getRandomEvents(available, 1)[0];
         if (randomEvent) {
-          setRecommendedArticles(prev => Array.isArray(prev) ? [...prev, randomEvent] : [randomEvent]);
+          setRecommendedArticles(prev => [...prev, randomEvent]);
         }
       }, 500);
     });
