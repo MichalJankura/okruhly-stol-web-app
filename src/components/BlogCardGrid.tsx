@@ -218,10 +218,10 @@ const BlogCardGrid = () => {
             const currentIds = new Set(recommendedArticles.map(article => article.id));
             const newRecommendations = data.filter((rec: any) => !currentIds.has(rec.id) && rec.id !== eventId);
 
-            const TARGET_COUNT = 8; // koľko odporúčaní má byť zobrazených
+            const TARGET_COUNT = 10; 
 
             setRecommendedArticles(prev => {
-              const current = prev.filter(article => article.id !== eventId); // odstránené ohodnotené
+              const current = prev.filter(article => article.id !== eventId); 
               const added = [];
 
               for (const rec of newRecommendations) {
@@ -229,7 +229,6 @@ const BlogCardGrid = () => {
                 added.push(rec);
               }
 
-              // fallback z allArticles ak chýba
               const currentIds = new Set([...current, ...added].map(a => a.id));
               const missingCount = TARGET_COUNT - (current.length + added.length);
               const fallback = getRandomEvents(
