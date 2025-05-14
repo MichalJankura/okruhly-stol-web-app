@@ -6,7 +6,7 @@ import logging
 import time
 import os
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from dotenv import load_dotenv
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import MultiLabelBinarizer
@@ -259,7 +259,7 @@ def recommend_events(user_id, top_n=10):
             scores_dict = apply_distance_penalty(scores_dict, list(scores_dict.keys()), user_lat, user_lon, preferences)
             
             # Get current time and threshold for recent interactions
-            now = datetime.utcnow()
+            now = datetime.now(UTC)
             recent_threshold = now - timedelta(minutes=2)
 
             # Exclude events that are:
@@ -282,7 +282,7 @@ def recommend_events(user_id, top_n=10):
         else:
             # If no location data, just sort by scores
             # Get current time and threshold for recent interactions
-            now = datetime.utcnow()
+            now = datetime.now(UTC)
             recent_threshold = now - timedelta(minutes=2)
 
             # Exclude events that are:
