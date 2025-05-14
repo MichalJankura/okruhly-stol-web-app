@@ -486,12 +486,12 @@ const Profile = () => {
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Kategórie podujatí (Vyberte najviac 3)</label>
+                  <label className="block text-sm font-medium mb-1">Kategórie podujatí (Vyberte najviac 5)</label>
                   <div className="flex flex-wrap gap-2">
                     {[
                       "Koncert", "Divadlo", "Výstava",
                       "Vernisáž / Výstava", "Trh / Jarmok / Burza",
-                      "Sprevádzanie", "Kultúrne podujatie", "Ostatné"
+                      "Sprevádzanie", "Kultúrne podujatie","Športové podujatie","Festivaly","Podujatie pre deti","Hudba", "Ostatné"
                     ].map((category) => (
                       <label key={category} className="inline-flex items-center">
                         <input
@@ -500,12 +500,12 @@ const Profile = () => {
                           checked={preferences.eventCategories.includes(category)}
                           onChange={(e) => {
                             const selected = e.target.checked
-                              ? [...preferences.eventCategories, category].slice(0, 3)
+                              ? [...preferences.eventCategories, category].slice(0, 5)
                               : preferences.eventCategories.filter((c) => c !== category);
                             dispatch({ type: "UPDATE_FIELD", field: "eventCategories", value: selected });
                           }}
                           className="form-checkbox"
-                          disabled={!preferences.eventCategories.includes(category) && preferences.eventCategories.length >= 3}
+                          disabled={!preferences.eventCategories.includes(category) && preferences.eventCategories.length >= 5}
                         />
                         <span className="ml-2">{category}</span>
                       </label>
