@@ -6,6 +6,7 @@ import logging
 import time
 import os
 import random
+from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import MultiLabelBinarizer
@@ -230,7 +231,7 @@ def recommend_events(user_id, top_n=10):
             content_scores = pd.Series(content_scores, index=event_df["id"])
 
             # Popularity score - interaction count
-            event_interaction_counts = df["event_id"].value_counts()
+            event_interaction_counts = df[df['rating'] > 0]["event_id"].value_counts()  # Only count positive interactions
             popular_scores = pd.Series(0, index=collab_scores.index)
             for event_id, count in event_interaction_counts.items():
                 if event_id in popular_scores:
@@ -257,17 +258,47 @@ def recommend_events(user_id, top_n=10):
         if user_lat is not None and user_lon is not None:
             scores_dict = apply_distance_penalty(scores_dict, list(scores_dict.keys()), user_lat, user_lon, preferences)
             
-            # Exclude events the user marked as 'not_interested'
-            not_interested_ids = df[(df['user_id'] == user_id) & (df['rating'] == -1)]['event_id'].tolist()
-            scores_dict = {k: v for k, v in scores_dict.items() if k not in not_interested_ids}
+            # Get current time and threshold for recent interactions
+            now = datetime.utcnow()
+            recent_threshold = now - timedelta(minutes=2)
+
+            # Exclude events that are:
+            # - marked as "not_interested" (rating -1), or
+            # - marked as "interested" very recently (within last 2 minutes)
+            df['interaction_time'] = pd.to_datetime(df.get('interaction_time'), errors='coerce')  # safe datetime parsing
+
+            filtered_ids = df[
+                (df['user_id'] == user_id) &
+                (
+                    (df['rating'] == -1) |
+                    ((df['rating'] == 1) & (df['interaction_time'] > recent_threshold))
+                )
+            ]['event_id'].tolist()
+
+            scores_dict = {k: v for k, v in scores_dict.items() if k not in filtered_ids}
             
             # Sort by final scores and get top N
             recommended_ids = sorted(scores_dict.keys(), key=lambda x: scores_dict[x], reverse=True)[:top_n]
         else:
             # If no location data, just sort by scores
-            # Exclude events the user marked as 'not_interested'
-            not_interested_ids = df[(df['user_id'] == user_id) & (df['rating'] == -1)]['event_id'].tolist()
-            scores_dict = {k: v for k, v in scores_dict.items() if k not in not_interested_ids}
+            # Get current time and threshold for recent interactions
+            now = datetime.utcnow()
+            recent_threshold = now - timedelta(minutes=2)
+
+            # Exclude events that are:
+            # - marked as "not_interested" (rating -1), or
+            # - marked as "interested" very recently (within last 2 minutes)
+            df['interaction_time'] = pd.to_datetime(df.get('interaction_time'), errors='coerce')  # safe datetime parsing
+
+            filtered_ids = df[
+                (df['user_id'] == user_id) &
+                (
+                    (df['rating'] == -1) |
+                    ((df['rating'] == 1) & (df['interaction_time'] > recent_threshold))
+                )
+            ]['event_id'].tolist()
+
+            scores_dict = {k: v for k, v in scores_dict.items() if k not in filtered_ids}
             
             recommended_ids = sorted(scores_dict.keys(), key=lambda x: scores_dict[x], reverse=True)[:top_n]
 
