@@ -23,7 +23,7 @@ export default function Membership() {
       ></div>
       <div className="mx-auto max-w-4xl text-center relative z-10">
         <p className="mt-2 text-5xl font-semibold tracking-tight text-white sm:text-6xl">
-          Staňte se členom ešte dnes
+          Staňte sa členom ešte dnes
         </p>
       </div>
       <div className="mx-auto mt-16 grid max-w-7xl grid-cols-1 gap-6 sm:mt-20 md:grid-cols-2 lg:grid-cols-3 relative z-10">
